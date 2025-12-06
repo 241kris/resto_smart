@@ -92,12 +92,12 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      orders: orders.map(order => ({
+      orders: orders.map((order) => ({
         id: order.id,
         totalAmount: order.totalAmount,
         status: order.status,
         table: order.table,
-        items: order.items.map(item => ({
+        items: order.items.map((item) => ({
           id: item.id,
           product: item.product,
           quantity: item.quantity,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         totalAmount: order.totalAmount,
         status: order.status,
         table: order.table,
-        items: order.items.map(item => ({
+        items: order.items.map((item) => ({
           id: item.id,
           product: item.product,
           quantity: item.quantity,
