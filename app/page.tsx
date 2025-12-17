@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/AuthContext"
 import Sidebar from "@/components/Sidebar"
+import AnalyticsPage from "@/components/AnalyticsPage"
 import ProductsPage from "@/components/ProductsPage"
 import CategoriesPage from "@/components/CategoriesPage"
 import TablesPage from "@/components/TablesPage"
@@ -12,7 +13,7 @@ import AuthPage from "@/components/AuthPage"
 
 export default function Home() {
   const { isAuthenticated, isLoading, user } = useAuth()
-  const [currentPage, setCurrentPage] = useState("products")
+  const [currentPage, setCurrentPage] = useState("analytics")
 
   // Forcer la redirection vers Établissement si pas d'établissement
   useEffect(() => {
@@ -23,6 +24,8 @@ export default function Home() {
 
   const renderPage = () => {
     switch (currentPage) {
+      case "analytics":
+        return <AnalyticsPage />
       case "products":
         return <ProductsPage />
       case "categories":
@@ -34,7 +37,7 @@ export default function Home() {
       case "establishment":
         return <EstablishmentPage />
       default:
-        return <ProductsPage />
+        return <AnalyticsPage />
     }
   }
 

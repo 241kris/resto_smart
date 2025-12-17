@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Store,
-  LogOut
+  LogOut,
+  BarChart3
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/AuthContext"
@@ -22,6 +23,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { id: "analytics", label: "Statistiques", icon: BarChart3 },
   { id: "products", label: "Produits", icon: UtensilsCrossed },
   { id: "categories", label: "Catégories", icon: FolderOpen },
   { id: "tables", label: "Tables", icon: QrCode },
