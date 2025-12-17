@@ -1,26 +1,25 @@
 // ---------------------------------------
-//  API Route: GET /api/restaurants/[id]/menu
-//  Récupère le menu complet d'un restaurant (public)
+//  API Route: GET /api/restaurants/slug/[slug]/menu
+//  Récupère le menu complet d'un restaurant par son slug (public)
 // ---------------------------------------
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 /**
- * GET /api/restaurants/[id]/menu
- * Récupère les informations du restaurant, catégories et produits (route publique)
+ * GET /api/restaurants/slug/[slug]/menu
+ * Récupère les informations du restaurant, catégories et produits par slug (route publique)
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { id } = await params;
-    const restaurantId = id;
+    const { slug } = await params;
 
-    // 1. Récupérer les informations du restaurant
-    const restaurant = await prisma.establishment.findUnique({
-      where: { id: restaurantId },
+    // 1. Récupérer les informations du restaurant par slug
+    const restaurant = await prisma.establishment.findFirst({
+      where: { slug },
       select: {
         id: true,
         name: true,
@@ -45,7 +44,7 @@ export async function GET(
     // 2. Récupérer toutes les catégories actives du restaurant
     const categories = await prisma.category.findMany({
       where: {
-        establishmentId: restaurantId,
+        establishmentId: restaurant.id,
         deleted: false
       },
       select: {
@@ -60,7 +59,7 @@ export async function GET(
     // 3. Récupérer tous les produits du restaurant avec leurs catégories
     const products = await prisma.product.findMany({
       where: {
-        establishmentId: restaurantId,
+        establishmentId: restaurant.id,
       },
       include: {
         category: {

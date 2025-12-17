@@ -1,7 +1,7 @@
 "use client"; // <-- nécessaire pour utiliser QueryClientProvider
 
 import { QueryClient } from '@tanstack/react-query';
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Modak } from "next/font/google";
 import "./globals.css";
 import Providers from './providers';
 
@@ -17,10 +17,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const modak = Modak({
+  weight: "400",
+  variable: "--font-modak",
+  subsets: ["latin"],
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" >
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${modak.variable} antialiased`}>
         <Providers>
           {children}
         </Providers>

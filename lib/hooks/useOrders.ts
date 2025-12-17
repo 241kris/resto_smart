@@ -16,10 +16,16 @@ export interface Order {
   id: string
   totalAmount: number
   status: 'PENDING' | 'completed' | 'PAID' | 'CANCELLED'
-  table: {
+  table?: {
     id: string
     number: number
     tableToken: string
+  } | null
+  customer?: {
+    firstName: string
+    lastName: string
+    phone: string
+    address: string
   }
   items: OrderItem[]
   createdAt: string

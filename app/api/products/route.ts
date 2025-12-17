@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { uploadImageToSupabase } from '@/lib/uploadImage'
+import { compressImage } from '@/lib/compressImage'
 import { nanoid } from 'nanoid'
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -30,6 +31,15 @@ export async function GET() {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { establishment: true }
+    })
+
+    // 🔍 DEBUG: Vérifier si l'établissement est trouvé
+    console.log('🔍 GET /api/products - User trouvé:', {
+      userId: user?.id,
+      email: user?.email,
+      hasEstablishment: !!user?.establishment,
+      establishmentId: user?.establishment?.id,
+      establishmentName: user?.establishment?.name
     })
 
     if (!user?.establishment) {
@@ -164,8 +174,11 @@ export async function POST(request: Request) {
 
     if (image) {
       try {
-        const fileName = `product-${nanoid(16)}.png`
-        imageUrl = await uploadImageToSupabase(image, 'products', fileName)
+        // Compresser l'image avant l'upload
+        const compressedImage = await compressImage(image, 40) // 40% de qualité pour ~60% de réduction
+
+        const fileName = `product-${nanoid(16)}.webp`
+        imageUrl = await uploadImageToSupabase(compressedImage, 'products', fileName)
       } catch (uploadError) {
         console.error('Erreur upload image:', uploadError)
         return NextResponse.json(

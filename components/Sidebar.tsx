@@ -81,22 +81,33 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = currentPage === item.id
+                // Désactiver les boutons si pas d'établissement (sauf établissement)
+                const hasEstablishment = !!user?.establishmentId
+                const isDisabled = !hasEstablishment && item.id !== "establishment"
+
                 return (
                   <li key={item.id}>
                     <button
                       onClick={() => {
-                        onPageChange(item.id)
-                        setIsOpen(false)
+                        if (!isDisabled) {
+                          onPageChange(item.id)
+                          setIsOpen(false)
+                        }
                       }}
+                      disabled={isDisabled}
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left",
                         isActive
                           ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                          : "hover:bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]"
+                          : "hover:bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]",
+                        isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
                       )}
                     >
                       <Icon className="h-5 w-5" />
                       <span className="font-medium">{item.label}</span>
+                      {isDisabled && (
+                        <span className="ml-auto text-xs text-muted-foreground">🔒</span>
+                      )}
                     </button>
                   </li>
                 )

@@ -3,20 +3,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 export interface Establishment {
   id: string
   name: string
+  slug: string | null
+  description: string | null
   email: string | null
-  phone: string
-  address: string
-  image_cover: string | null
+  phones: string[]
+  images: string[]
+  address: any
+  latitude: number | null
+  longitude: number | null
   userId: string
   createdAt: string
 }
 
 export interface EstablishmentFormData {
   name: string
-  email: string
-  phone: string
+  description?: string
+  email?: string
+  phones: string[]
+  images: string[]
   address: string
-  image_cover?: string
+  latitude?: number
+  longitude?: number
 }
 
 // Hook pour récupérer l'établissement

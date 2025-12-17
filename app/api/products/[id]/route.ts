@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { uploadImageToSupabase, deleteImageFromSupabase } from '@/lib/uploadImage'
+import { compressImage } from '@/lib/compressImage'
 import { nanoid } from 'nanoid'
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -122,8 +123,11 @@ export async function PUT(
 
     if (image && image !== existingProduct.image) {
       try {
-        const fileName = `product-${nanoid(16)}.png`
-        imageUrl = await uploadImageToSupabase(image, 'products', fileName)
+        // Compresser l'image avant l'upload
+        const compressedImage = await compressImage(image, 40) // 40% de qualité pour ~60% de réduction
+
+        const fileName = `product-${nanoid(16)}.webp`
+        imageUrl = await uploadImageToSupabase(compressedImage, 'products', fileName)
 
         // Supprimer l'ancienne image si elle existe
         if (existingProduct.image) {

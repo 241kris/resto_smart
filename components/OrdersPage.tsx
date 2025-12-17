@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle } from "lucide-react"
+import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle, FileText } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useOrders, useUpdateOrderStatus, useDeleteOrder, type Order } from "@/lib/hooks/useOrders"
+import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import { OrderNotification } from "./OrderNotification"
+import { generateInvoicePDF } from "@/lib/generateInvoicePDF"
 
 export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -17,10 +19,12 @@ export default function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
 
   const { data, isLoading } = useOrders()
+  const { data: establishmentData } = useEstablishment()
   const updateStatus = useUpdateOrderStatus()
   const deleteOrder = useDeleteOrder()
 
   const orders = data?.orders || []
+  const establishment = establishmentData?.establishment
 
   const getStatusBadge = (status: Order["status"]) => {
     const statusConfig = {
@@ -85,6 +89,15 @@ export default function OrdersPage() {
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order)
     setIsDialogOpen(true)
+  }
+
+  const handleDownloadInvoice = (order: Order) => {
+    if (!establishment) {
+      alert('Impossible de générer la facture. Informations du restaurant manquantes.')
+      return
+    }
+
+    generateInvoicePDF(order, establishment)
   }
 
   const pendingOrdersCount = orders.filter(o => o.status === "PENDING").length
@@ -183,14 +196,23 @@ export default function OrdersPage() {
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">#{order.id.slice(0, 8)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center">
-                          <span className="text-xs font-semibold text-[hsl(var(--primary))]">
-                            {order.table.number}
-                          </span>
+                      {order.table ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center">
+                            <span className="text-xs font-semibold text-[hsl(var(--primary))]">
+                              {order.table.number}
+                            </span>
+                          </div>
+                          Table {order.table.number}
                         </div>
-                        Table {order.table.number}
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-orange-400/10 flex items-center justify-center">
+                            <ShoppingCart className="h-4 w-4 text-orange-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground">Commande publique</span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-[hsl(var(--muted-foreground))]">
@@ -213,15 +235,29 @@ export default function OrdersPage() {
                           size="sm"
                           className="gap-2"
                           onClick={() => openOrderDetails(order)}
+                          title="Voir les détails"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {order.status === "PAID" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => handleDownloadInvoice(order)}
+                            disabled={!establishment}
+                            title="Télécharger la facture PDF"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        )}
                         {(order.status === "PENDING" || order.status === "CANCELLED") && (
                           <Button
                             variant="destructive"
                             size="sm"
                             className="gap-2"
                             onClick={() => confirmDelete(order.id)}
+                            title="Supprimer"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -251,13 +287,42 @@ export default function OrdersPage() {
               <div className="grid grid-cols-2 gap-4 p-4 bg-[hsl(var(--muted))]/50 border border-gray-300 rounded-lg">
                 <div>
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">Table</p>
-                  <p className="font-semibold text-sm">Table {selectedOrder.table.number}</p>
+                  {selectedOrder.table ? (
+                    <p className="font-semibold text-sm">Table {selectedOrder.table.number}</p>
+                  ) : (
+                    <p className="font-semibold text-sm text-orange-600">Commande publique</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">Date/Heure</p>
                   <p className="font-semibold text-sm">{formatDate(selectedOrder.createdAt)}</p>
                 </div>
               </div>
+
+              {/* Informations Client pour commandes publiques */}
+              {!selectedOrder.table && selectedOrder.customer && (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <h3 className="font-semibold mb-3 text-orange-900">Informations Client</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-orange-700">Prénom</p>
+                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).firstName}</p>
+                    </div>
+                    <div>
+                      <p className="text-orange-700">Nom</p>
+                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).lastName}</p>
+                    </div>
+                    <div>
+                      <p className="text-orange-700">Téléphone</p>
+                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-orange-700">Adresse</p>
+                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).address}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h3 className="font-semibold mb-3">Articles commandés</h3>
@@ -293,33 +358,46 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                {selectedOrder.status === "PENDING" && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {selectedOrder.status === "PENDING" && (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "completed")}
+                      disabled={updateStatus.isPending}
+                    >
+                      Marquer traité
+                    </Button>
+                  )}
+                  {(selectedOrder.status === "PENDING" || selectedOrder.status === "completed") && (
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "PAID")}
+                      disabled={updateStatus.isPending}
+                    >
+                      Marquer payé
+                    </Button>
+                  )}
+                  {(selectedOrder.status === "PENDING" || selectedOrder.status === "CANCELLED") && (
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => confirmDelete(selectedOrder.id)}
+                    >
+                      Supprimer
+                    </Button>
+                  )}
+                </div>
+                {selectedOrder.status === "PAID" && (
                   <Button
                     variant="outline"
-                    className="flex-1"
-                    onClick={() => handleUpdateStatus(selectedOrder.id, "completed")}
-                    disabled={updateStatus.isPending}
+                    className="w-full gap-2"
+                    onClick={() => handleDownloadInvoice(selectedOrder)}
+                    disabled={!establishment}
                   >
-                    Marquer traité
-                  </Button>
-                )}
-                {(selectedOrder.status === "PENDING" || selectedOrder.status === "completed") && (
-                  <Button
-                    className="flex-1"
-                    onClick={() => handleUpdateStatus(selectedOrder.id, "PAID")}
-                    disabled={updateStatus.isPending}
-                  >
-                    Marquer payé
-                  </Button>
-                )}
-                {(selectedOrder.status === "PENDING" || selectedOrder.status === "CANCELLED") && (
-                  <Button
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => confirmDelete(selectedOrder.id)}
-                  >
-                    Supprimer
+                    <FileText className="h-4 w-4" />
+                    Télécharger la facture (PDF)
                   </Button>
                 )}
               </div>

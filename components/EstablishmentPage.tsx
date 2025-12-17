@@ -1,41 +1,48 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Store, Mail, Phone, MapPin, Upload, Pencil, AlertCircle } from "lucide-react"
+import { Store, Mail, Phone, MapPin, Upload, Pencil, AlertCircle, X, Plus, FileText, Share2, Copy, Check } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useEstablishment, useCreateOrUpdateEstablishment, type EstablishmentFormData } from "@/lib/hooks/useEstablishment"
+import { useAuth } from "@/lib/AuthContext"
 import Image from "next/image"
 
 export default function EstablishmentPage() {
   const { data, isLoading, error } = useEstablishment()
   const createOrUpdateMutation = useCreateOrUpdateEstablishment()
+  const { checkSession } = useAuth()
 
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<EstablishmentFormData>({
     name: "",
+    description: "",
     email: "",
-    phone: "",
-    address: "",
-    image_cover: ""
+    phones: [""],
+    images: [],
+    address: ""
   })
-  const [imagePreview, setImagePreview] = useState<string>("")
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [imageError, setImageError] = useState<string>("")
+  const [copied, setCopied] = useState(false)
 
   // Initialiser le formulaire avec les données de l'établissement
   useEffect(() => {
     if (data?.establishment) {
       setFormData({
         name: data.establishment.name,
+        description: data.establishment.description || "",
         email: data.establishment.email || "",
-        phone: data.establishment.phone,
-        address: data.establishment.address,
-        image_cover: data.establishment.image_cover || ""
+        phones: data.establishment.phones.length > 0 ? data.establishment.phones : [""],
+        images: data.establishment.images || [],
+        address: typeof data.establishment.address === 'string'
+          ? data.establishment.address
+          : JSON.stringify(data.establishment.address)
       })
-      setImagePreview(data.establishment.image_cover || "")
+      setImagePreviews(data.establishment.images || [])
       setIsEditing(false)
     } else if (data?.establishment === null) {
       // Aucun établissement, mode création
@@ -47,11 +54,37 @@ export default function EstablishmentPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  // Gestion des téléphones
+  const handlePhoneChange = (index: number, value: string) => {
+    const newPhones = [...formData.phones]
+    newPhones[index] = value
+    setFormData(prev => ({ ...prev, phones: newPhones }))
+  }
+
+  const addPhone = () => {
+    if (formData.phones.length < 3) {
+      setFormData(prev => ({ ...prev, phones: [...prev.phones, ""] }))
+    }
+  }
+
+  const removePhone = (index: number) => {
+    if (formData.phones.length > 1) {
+      const newPhones = formData.phones.filter((_, i) => i !== index)
+      setFormData(prev => ({ ...prev, phones: newPhones }))
+    }
+  }
+
+  // Gestion des images
+  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
     setImageError("")
 
-    if (file) {
+    if (files.length + formData.images.length > 7) {
+      setImageError("Vous pouvez ajouter un maximum de 7 images")
+      return
+    }
+
+    files.forEach(file => {
       // Vérifier le type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
       if (!validTypes.includes(file.type)) {
@@ -60,25 +93,45 @@ export default function EstablishmentPage() {
       }
 
       // Vérifier la taille (max 3MB)
-      const maxSize = 3 * 1024 * 1024 // 3MB en bytes
+      const maxSize = 3 * 1024 * 1024
       if (file.size > maxSize) {
-        setImageError("L'image ne doit pas dépasser 3 Mo")
+        setImageError("Chaque image ne doit pas dépasser 3 Mo")
         return
       }
 
       const reader = new FileReader()
       reader.onloadend = () => {
         const result = reader.result as string
-        setImagePreview(result)
-        setFormData(prev => ({ ...prev, image_cover: result }))
+        setImagePreviews(prev => [...prev, result])
+        setFormData(prev => ({ ...prev, images: [...prev.images, result] }))
       }
       reader.readAsDataURL(file)
-    }
+    })
+  }
+
+  const removeImage = (index: number) => {
+    setImagePreviews(prev => prev.filter((_, i) => i !== index))
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))
   }
 
   const handleSave = async () => {
     try {
-      await createOrUpdateMutation.mutateAsync(formData)
+      // Filtrer les téléphones vides
+      const validPhones = formData.phones.filter(phone => phone.trim() !== "")
+
+      if (validPhones.length === 0) {
+        setImageError("Au moins un numéro de téléphone est requis")
+        return
+      }
+
+      await createOrUpdateMutation.mutateAsync({
+        ...formData,
+        phones: validPhones
+      })
+
+      // Rafraîchir la session pour mettre à jour l'establishmentId
+      await checkSession()
+
       setIsEditing(false)
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error)
@@ -89,15 +142,27 @@ export default function EstablishmentPage() {
     if (data?.establishment) {
       setFormData({
         name: data.establishment.name,
+        description: data.establishment.description || "",
         email: data.establishment.email || "",
-        phone: data.establishment.phone,
-        address: data.establishment.address,
-        image_cover: data.establishment.image_cover || ""
+        phones: data.establishment.phones.length > 0 ? data.establishment.phones : [""],
+        images: data.establishment.images || [],
+        address: typeof data.establishment.address === 'string'
+          ? data.establishment.address
+          : JSON.stringify(data.establishment.address)
       })
-      setImagePreview(data.establishment.image_cover || "")
+      setImagePreviews(data.establishment.images || [])
       setIsEditing(false)
     }
     setImageError("")
+  }
+
+  const handleCopyLink = () => {
+    if (establishment?.slug) {
+      const menuUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${establishment.slug}`
+      navigator.clipboard.writeText(menuUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   // Affichage du loader
@@ -152,63 +217,82 @@ export default function EstablishmentPage() {
       </div>
 
       {/* Erreur de mutation */}
-      {createOrUpdateMutation.isError && (
+      {(createOrUpdateMutation.isError || imageError) && (
         <Card className="border-destructive">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
-              <p>{(createOrUpdateMutation.error as Error)?.message || "Erreur lors de la sauvegarde"}</p>
+              <p>{imageError || (createOrUpdateMutation.error as Error)?.message || "Erreur lors de la sauvegarde"}</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Cover Image */}
+      {/* Images Gallery */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Image de couverture
+            Images du restaurant ({imagePreviews.length}/7)
           </CardTitle>
           <CardDescription>
-            Cette image sera affichée en haut de votre page restaurant (Formats: JPEG, JPG, PNG, GIF, WEBP - Max: 3 Mo)
+            Ajoutez jusqu'à 7 images pour présenter votre établissement (Formats: JPEG, JPG, PNG, GIF, WEBP - Max: 3 Mo chacune)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="relative h-64 w-full rounded-lg overflow-hidden bg-[hsl(var(--muted))]">
-              {imagePreview ? (
-                <Image
-                  src={imagePreview}
-                  alt="Cover"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Upload className="h-12 w-12 text-[hsl(var(--muted-foreground))]" />
+            {/* Grid d'images */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative group">
+                  <div className="relative h-40 w-full rounded-lg overflow-hidden bg-[hsl(var(--muted))]">
+                    <Image
+                      src={preview}
+                      alt={`Image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                    {isEditing && (
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {index === 0 && (
+                    <p className="text-xs text-center mt-1 text-[hsl(var(--muted-foreground))]">
+                      Image principale
+                    </p>
+                  )}
                 </div>
+              ))}
+
+              {/* Bouton d'ajout d'images */}
+              {isEditing && imagePreviews.length < 7 && (
+                <label className="relative h-40 w-full rounded-lg border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors cursor-pointer flex items-center justify-center">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleImagesChange}
+                    className="hidden"
+                    multiple
+                  />
+                  <div className="text-center">
+                    <Plus className="h-8 w-8 mx-auto mb-2 text-[hsl(var(--muted-foreground))]" />
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">Ajouter des images</p>
+                  </div>
+                </label>
               )}
             </div>
-            {isEditing && (
-              <div className="space-y-2">
-                <Label htmlFor="coverImage">Image de couverture</Label>
-                <Input
-                  id="coverImage"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                  onChange={handleImageChange}
-                  className="cursor-pointer"
-                />
-                {imageError && (
-                  <div className="flex items-center gap-2 text-destructive text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <p>{imageError}</p>
-                  </div>
-                )}
-                <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                  Formats acceptés: JPEG, JPG, PNG, GIF, WEBP (Max: 3 Mo)
-                </p>
+
+            {imagePreviews.length === 0 && !isEditing && (
+              <div className="h-40 rounded-lg border-2 border-dashed border-[hsl(var(--border))] flex items-center justify-center">
+                <div className="text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-2 text-[hsl(var(--muted-foreground))]" />
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">Aucune image</p>
+                </div>
               </div>
             )}
           </div>
@@ -243,6 +327,25 @@ export default function EstablishmentPage() {
             )}
           </div>
 
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+              Description
+            </Label>
+            {isEditing ? (
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                placeholder="Décrivez votre établissement..."
+                rows={4}
+              />
+            ) : (
+              <p className="text-lg pl-6 whitespace-pre-wrap">{establishment?.description || "-"}</p>
+            )}
+          </div>
+
           {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email" className="flex items-center gap-2">
@@ -262,23 +365,54 @@ export default function EstablishmentPage() {
             )}
           </div>
 
-          {/* Phone */}
+          {/* Phones */}
           <div className="space-y-2">
-            <Label htmlFor="phone" className="flex items-center gap-2">
+            <Label className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-              Téléphone *
+              Téléphone(s) * (Maximum 3)
             </Label>
             {isEditing ? (
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-                placeholder="+33 1 23 45 67 89"
-                required
-              />
+              <div className="space-y-2">
+                {formData.phones.map((phone, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(index, e.target.value)}
+                      placeholder={`Téléphone ${index + 1}`}
+                      required={index === 0}
+                    />
+                    {formData.phones.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removePhone(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {formData.phones.length < 3 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPhone}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Ajouter un téléphone
+                  </Button>
+                )}
+              </div>
             ) : (
-              <p className="text-lg pl-6">{establishment?.phone || "-"}</p>
+              <div className="pl-6 space-y-1">
+                {establishment?.phones.map((phone, index) => (
+                  <p key={index} className="text-lg">{phone}</p>
+                ))}
+              </div>
             )}
           </div>
 
@@ -298,7 +432,7 @@ export default function EstablishmentPage() {
                 required
               />
             ) : (
-              <p className="text-lg pl-6 whitespace-pre-wrap">{establishment?.address || "-"}</p>
+              <p className="text-lg pl-6 whitespace-pre-wrap">{establishment?.address ? (typeof establishment.address === 'string' ? establishment.address : JSON.stringify(establishment.address)) : "-"}</p>
             )}
           </div>
 
@@ -308,7 +442,7 @@ export default function EstablishmentPage() {
               <Button
                 onClick={handleSave}
                 className="flex-1"
-                disabled={createOrUpdateMutation.isPending || !formData.name || !formData.phone || !formData.address}
+                disabled={createOrUpdateMutation.isPending || !formData.name || !formData.address || formData.phones.filter(p => p.trim()).length === 0}
               >
                 {createOrUpdateMutation.isPending ? "Enregistrement..." : "Enregistrer"}
               </Button>
@@ -327,6 +461,50 @@ export default function EstablishmentPage() {
         </CardContent>
       </Card>
 
+      {/* Share Menu Link Card */}
+      {establishment && establishment.slug && (
+        <Card className="bg-[hsl(var(--primary))]/5 border-[hsl(var(--primary))]/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[hsl(var(--primary))]">
+              <Share2 className="h-5 w-5" />
+              Lien du menu digital
+            </CardTitle>
+            <CardDescription>
+              Partagez ce lien avec vos clients pour qu'ils puissent accéder à votre menu en ligne
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input
+                value={`${process.env.NEXT_PUBLIC_BASE_URL}/${establishment.slug}`}
+                readOnly
+                className="flex-1 font-mono text-sm"
+              />
+              <Button
+                onClick={handleCopyLink}
+                className="gap-2 min-w-[140px]"
+                variant={copied ? "default" : "outline"}
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Copié!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copier le lien
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-[hsl(var(--muted-foreground))]">
+              Vos clients pourront voir votre menu, consulter les produits et passer des commandes via ce lien.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Info Card */}
       <Card className="bg-[hsl(var(--muted))]/50">
         <CardHeader>
@@ -337,7 +515,7 @@ export default function EstablishmentPage() {
             Ces informations seront visibles par vos clients sur la page de menu en ligne.
           </p>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Assurez-vous que toutes les informations sont à jour et correctes.
+            La première image sera utilisée comme image de couverture principale.
           </p>
         </CardContent>
       </Card>

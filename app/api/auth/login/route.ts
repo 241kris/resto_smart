@@ -47,6 +47,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // 🔍 DEBUG: Vérifier si l'établissement est trouvé
+    console.log('🔍 Login - User trouvé:', {
+      userId: user?.id,
+      email: user?.email,
+      hasEstablishment: !!user?.establishment,
+      establishmentId: user?.establishment?.id,
+      establishmentName: user?.establishment?.name
+    })
+
     // Création du token JWT avec une expiration de 3 mois (90 jours)
     const token = await new SignJWT({
       userId: user.id,

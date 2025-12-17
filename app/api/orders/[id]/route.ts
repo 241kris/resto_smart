@@ -109,6 +109,7 @@ export async function PATCH(
         totalAmount: updatedOrder.totalAmount,
         status: updatedOrder.status,
         table: updatedOrder.table,
+        customer: updatedOrder.customer,
         items: updatedOrder.items,
         createdAt: updatedOrder.createdAt,
         updatedAt: updatedOrder.updatedAt,

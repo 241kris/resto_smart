@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Minus, Plus, Trash2, ShoppingCart, X, Loader2, CheckCircle2 } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingCart, Check } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -12,34 +12,44 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/lib/contexts/CartContext"
-import { useMutation } from "@tanstack/react-query"
+import { CustomerForm, type CustomerData } from "./CustomerForm"
 import { saveOrderToLocalStorage } from "@/lib/orderStorage"
 
-interface CartModalProps {
+interface ViewCartModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   restaurantId: string
-  tableToken: string
+  restaurantName: string
 }
 
-export function CartModal({ open, onOpenChange, restaurantId, tableToken }: CartModalProps) {
+export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName }: ViewCartModalProps) {
   const { items, updateQuantity, removeItem, totalPrice, totalItems, clearCart } = useCart()
-  const [showSuccess, setShowSuccess] = useState(false)
+  const [showCustomerForm, setShowCustomerForm] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [orderSuccess, setOrderSuccess] = useState(false)
 
-  const createOrder = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/orders', {
+  const handleSubmitOrder = async (customerData: CustomerData) => {
+    setIsSubmitting(true)
+
+    try {
+      // Préparer les données de la commande
+      const orderData = {
+        restaurantId,
+        items: items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        customer: customerData,
+      }
+
+      // Envoyer la commande à l'API
+      const response = await fetch('/api/orders/public', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          restaurantId,
-          tableToken,
-          items: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
       })
 
       if (!response.ok) {
@@ -47,66 +57,65 @@ export function CartModal({ open, onOpenChange, restaurantId, tableToken }: Cart
         throw new Error(error.error || 'Erreur lors de la création de la commande')
       }
 
-      return response.json()
-    },
-    onSuccess: (data) => {
-      // Sauvegarder la commande dans le localStorage
-      if (data.success && data.order) {
-        saveOrderToLocalStorage({
-          id: data.order.id,
-          restaurantId: data.order.restaurantId,
-          restaurantName: data.order.restaurantName,
-          totalAmount: data.order.totalAmount,
-          status: data.order.status,
-          items: data.order.items,
-          createdAt: data.order.createdAt,
-        })
-      }
+      const result = await response.json()
 
-      setShowSuccess(true)
+      // Sauvegarder la commande dans le localStorage
+      saveOrderToLocalStorage({
+        id: result.order.id,
+        restaurantId,
+        restaurantName,
+        totalAmount: result.order.totalAmount,
+        status: result.order.status,
+        items: result.order.items,
+        createdAt: result.order.createdAt,
+      })
+
+      // Afficher le succès
+      setOrderSuccess(true)
+
+      // Vider le panier après 2 secondes
       setTimeout(() => {
         clearCart()
-        setShowSuccess(false)
+        setShowCustomerForm(false)
+        setOrderSuccess(false)
         onOpenChange(false)
-      }, 3000)
-    },
-  })
+      }, 2000)
 
-  const handleConfirmOrder = () => {
-    if (items.length === 0) return
-    createOrder.mutate()
+    } catch (error) {
+      console.error('Erreur lors de la soumission de la commande:', error)
+      alert(error instanceof Error ? error.message : 'Erreur lors de la commande')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (showSuccess) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="relative">
-              <div className="absolute inset-0 animate-ping">
-                <CheckCircle2 className="h-24 w-24 text-green-500 opacity-75" />
-              </div>
-              <CheckCircle2 className="h-24 w-24 text-green-500 relative" />
-            </div>
-            <h3 className="text-2xl font-bold mt-6 mb-2">Commande confirmée !</h3>
-            <p className="text-muted-foreground text-center">
-              Votre commande a été transmise avec succès au restaurant.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
+  const handleProceedToOrder = () => {
+    setShowCustomerForm(true)
+  }
+
+  const handleCancelCustomerForm = () => {
+    setShowCustomerForm(false)
+  }
+
+  // Réinitialiser l'état quand la modal se ferme
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setShowCustomerForm(false)
+      setOrderSuccess(false)
+    }
+    onOpenChange(open)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b  border-gray-300">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-300">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">Votre panier</DialogTitle>
-         
+            <DialogTitle className="text-lg">
+              {orderSuccess ? "Commande confirmée !" : showCustomerForm ? "Vos informations" : "Votre panier"}
+            </DialogTitle>
           </div>
-          {items.length > 0 && (
+          {items.length > 0 && !showCustomerForm && !orderSuccess && (
             <p className="text-sm text-muted-foreground">
               {totalItems} article{totalItems > 1 ? 's' : ''}
             </p>
@@ -114,14 +123,38 @@ export function CartModal({ open, onOpenChange, restaurantId, tableToken }: Cart
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {items.length === 0 ? (
+          {/* Message de succès */}
+          {orderSuccess && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="rounded-full bg-emerald-100 p-6 mb-4">
+                <Check className="h-12 w-12 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Commande enregistrée !</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-md">
+                Votre commande a été enregistrée avec succès. Vous pourrez la consulter dans vos commandes pendant 24 heures.
+              </p>
+            </div>
+          )}
+
+          {/* Formulaire client */}
+          {showCustomerForm && !orderSuccess && (
+            <CustomerForm
+              onSubmit={handleSubmitOrder}
+              onCancel={handleCancelCustomerForm}
+              isLoading={isSubmitting}
+            />
+          )}
+
+          {/* Liste des produits du panier */}
+          {!showCustomerForm && !orderSuccess && (
+            items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="rounded-full bg-muted p-6 mb-4">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Votre panier est vide</h3>
               <p className="text-sm text-muted-foreground text-center">
-                Ajoutez des produits pour commencer votre commande
+                Ajoutez des produits pour voir votre sélection
               </p>
             </div>
           ) : (
@@ -129,7 +162,7 @@ export function CartModal({ open, onOpenChange, restaurantId, tableToken }: Cart
               {items.map((item) => (
                 <div
                   key={item.productId}
-                  className="flex gap-4 p-4 rounded-lg border   border-gray-300 bg-card hover:shadow-md transition-shadow"
+                  className="flex gap-4 p-4 rounded-lg border border-gray-300 bg-card hover:shadow-md transition-shadow"
                 >
                   {/* Image */}
                   <div className="relative w-15 h-15 flex-shrink-0 rounded-md overflow-hidden bg-muted">
@@ -149,8 +182,8 @@ export function CartModal({ open, onOpenChange, restaurantId, tableToken }: Cart
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold  ">{item.name}</h4>
-                    <p className="  text-sm text-emerald-700 font-medium mt-1">
+                    <h4 className="font-semibold">{item.name}</h4>
+                    <p className="text-sm text-emerald-700 font-medium mt-1">
                       {item.price.toFixed(2)} FCFA
                     </p>
 
@@ -193,44 +226,24 @@ export function CartModal({ open, onOpenChange, restaurantId, tableToken }: Cart
                 </div>
               ))}
             </div>
-          )}
+          )
+        )}
         </div>
 
-        {items.length > 0 && (
+        {items.length > 0 && !showCustomerForm && !orderSuccess && (
           <DialogFooter className="px-6 py-4 border-t flex-col border-gray-300 gap-4 sm:flex-col">
             <div className="flex items-center justify-between w-full">
               <span className="text-lg font-semibold">Total</span>
-              <span className="text-base  text-primary bg-emerald-700 px-3 text-gray-100 rounded-3xl">
+              <span className="text-base text-primary bg-emerald-700 px-3 text-gray-100 rounded-3xl">
                 {totalPrice.toFixed(2)} FCFA
               </span>
             </div>
-
-            <div className="flex gap-2 w-full">
-             
-              <Button
-                className="flex-1 gap-2 rounded-3xl bg-orange-400 font-normal text-gray-900"
-                onClick={handleConfirmOrder}
-                disabled={createOrder.isPending}
-              >
-                {createOrder.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Confirmation...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Confirmer la commande
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {createOrder.isError && (
-              <p className="text-sm text-destructive text-center w-full">
-                {createOrder.error?.message || 'Une erreur est survenue'}
-              </p>
-            )}
+            <Button
+              className="w-full bg-orange-400 hover:bg-orange-300 text-gray-900"
+              onClick={handleProceedToOrder}
+            >
+              Commander
+            </Button>
           </DialogFooter>
         )}
       </DialogContent>

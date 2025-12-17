@@ -97,6 +97,7 @@ export async function GET() {
         totalAmount: order.totalAmount,
         status: order.status,
         table: order.table,
+        customer: order.customer,
         items: order.items.map((item) => ({
           id: item.id,
           product: item.product,
@@ -243,6 +244,12 @@ export async function POST(request: NextRequest) {
             number: true,
             tableToken: true,
           }
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          }
         }
       }
     });
@@ -252,6 +259,8 @@ export async function POST(request: NextRequest) {
       success: true,
       order: {
         id: order.id,
+        restaurantId: order.restaurantId,
+        restaurantName: order.restaurant.name,
         totalAmount: order.totalAmount,
         status: order.status,
         table: order.table,

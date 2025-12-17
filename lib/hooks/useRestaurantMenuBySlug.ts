@@ -37,16 +37,16 @@ export interface RestaurantMenuResponse {
   totalCategories: number
 }
 
-// Hook pour récupérer le menu complet d'un restaurant (route publique)
-export function useRestaurantMenu(restaurantId?: string) {
+// Hook pour récupérer le menu complet d'un restaurant par slug (route publique)
+export function useRestaurantMenuBySlug(slug?: string) {
   return useQuery<RestaurantMenuResponse>({
-    queryKey: ['restaurant-menu', restaurantId],
+    queryKey: ['restaurant-menu-by-slug', slug],
     queryFn: async () => {
-      if (!restaurantId) {
-        throw new Error('ID du restaurant requis')
+      if (!slug) {
+        throw new Error('Slug du restaurant requis')
       }
 
-      const response = await fetch(`/api/restaurants/${restaurantId}/menu`)
+      const response = await fetch(`/api/restaurants/slug/${slug}/menu`)
 
       if (!response.ok) {
         const error = await response.json()
@@ -55,6 +55,6 @@ export function useRestaurantMenu(restaurantId?: string) {
 
       return response.json()
     },
-    enabled: !!restaurantId,
+    enabled: !!slug,
   })
 }

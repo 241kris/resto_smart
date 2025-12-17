@@ -27,10 +27,14 @@ model User {
 model Establishment {
   id          String  @id @default(uuid())
   name        String
+  slug        String 
+  description String? 
   email       String?
-  phone       String
-  image_cover String?
-  address     String
+  phones      Json    // Array de numéros de téléphone ["0123456789", "0987654321"]
+  images      Json    // Array d'URLs d'images (max 7) ["url1", "url2", ...]
+  address     Json?    // Objet adresse structuré {street, city, postalCode, country}
+  latitude    Float?
+  longitude   Float?
 
   // Relation vers User
   userId String @unique
@@ -104,8 +108,8 @@ model Order {
   restaurantId  String
   restaurant    Establishment @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
-  tableId       String
-  table         Table        @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId       String?
+  table         Table?        @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   // Montant total de la commande au moment du passage
   totalAmount   Float
@@ -113,9 +117,12 @@ model Order {
   // Statut de la commande
   status        OrderStatus @default(PENDING)
 
+  // Informations client pour les commandes publiques (optionnel)
+  customer      Json?
+
   // Produits commandés
   items         OrderItem[]
- 
+
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

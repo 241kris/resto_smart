@@ -7,27 +7,26 @@ import { ShoppingCart, MapPin, Phone, Mail, Loader2, Minus, Plus, Receipt } from
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useRestaurantMenu } from "@/lib/hooks/useRestaurantMenu"
+import { useRestaurantMenuBySlug } from "@/lib/hooks/useRestaurantMenuBySlug"
 import { CartProvider, useCart } from "@/lib/contexts/CartContext"
-import { CartModal } from "@/components/CartModal"
+import { ViewCartModal } from "@/components/ViewCartModal"
 import { MyOrdersModal } from "@/components/MyOrdersModal"
 import { ImageCarousel } from "@/components/ImageCarousel"
 import { ImageThumbnails } from "@/components/ImageThumbnails"
 
 interface PageProps {
   params: Promise<{
-    restaurantId: string
-    tableToken: string
+    slug: string
   }>
 }
 
-function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; tableToken: string }) {
+function RestaurantMenuContent({ slug }: { slug: string }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [ordersOpen, setOrdersOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
-  const { data, isLoading, error } = useRestaurantMenu(restaurantId)
+  const { data, isLoading, error } = useRestaurantMenuBySlug(slug)
   const { addItem, updateQuantity, removeItem, isInCart, totalItems, totalPrice, items } = useCart()
 
   const filteredProducts = selectedCategory && data
@@ -206,7 +205,6 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
                       ) : (
                         <div className="flex items-center gap-2 w-full">
                           <Button
-
                             size="icon"
                             className="h-9 w-9 rounded-full bg-emerald-700 hover:bg-emerald-600"
                             onClick={() => {
@@ -221,7 +219,6 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
                           </Button>
                           <span className="font-semibold flex-1 text-center">{quantity}</span>
                           <Button
-
                             size="icon"
                             className="h-9 w-9 rounded-full bg-emerald-700 hover:bg-emerald-600"
                             onClick={() => updateQuantity(product.id, quantity + 1)}
@@ -268,8 +265,7 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
       {totalItems > 0 && (
         <div className="fixed bottom-6 right-6 z-40">
           <Button
-
-            className="rounded-full shadow-2xl h-16 px-6 gap-3 hover:scale-105 transition-transform border-gray-50 bg-orange-400 hover:bg-orange-300   text-gray-900"
+            className="rounded-full shadow-2xl h-16 px-6 gap-3 hover:scale-105 transition-transform border-gray-50 bg-orange-400 hover:bg-orange-300 text-gray-900"
             onClick={() => setCartOpen(true)}
           >
             <div className="relative">
@@ -287,11 +283,11 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
       )}
 
       {/* Modal Panier */}
-      <CartModal
+      <ViewCartModal
         open={cartOpen}
         onOpenChange={setCartOpen}
-        restaurantId={restaurantId}
-        tableToken={tableToken}
+        restaurantId={restaurant.id}
+        restaurantName={restaurant.name}
       />
 
       {/* Modal Mes Commandes */}
@@ -313,12 +309,12 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
   )
 }
 
-export default function TableMenuPage({ params }: PageProps) {
-  const { restaurantId, tableToken } = use(params)
+export default function RestaurantMenuPage({ params }: PageProps) {
+  const { slug } = use(params)
 
   return (
     <CartProvider>
-      <TableMenuContent restaurantId={restaurantId} tableToken={tableToken} />
+      <RestaurantMenuContent slug={slug} />
     </CartProvider>
   )
 }
