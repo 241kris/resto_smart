@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart, Clock, CheckCircle, DollarSign, X, Loader2, RefreshCw } from "lucide-react"
+import { ShoppingCart, Clock, CheckCircle, DollarSign, X, Loader2 } from "lucide-react"
 import { getOrdersFromLocalStorage, updateOrderStatusInLocalStorage, type StoredOrder } from "@/lib/orderStorage"
 import { toast } from "sonner"
 
@@ -18,20 +18,14 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
   const [loading, setLoading] = useState(false)
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
 
-  // Charger les commandes au montage et quand la modal s'ouvre
-  useEffect(() => {
-    if (open) {
-      loadOrders()
-    }
-  }, [open])
-
-  const loadOrders = () => {
+  // Fonction pour charger les commandes du localStorage
+  const loadOrders = useCallback(() => {
     const localOrders = getOrdersFromLocalStorage()
     setOrders(localOrders)
-  }
+  }, [])
 
   // Récupérer le statut mis à jour depuis l'API
-  const refreshOrderStatus = async (orderId: string) => {
+  const refreshOrderStatus = useCallback(async (orderId: string) => {
     try {
       const response = await fetch(`/api/orders/public/${orderId}`)
       if (!response.ok) return
@@ -45,14 +39,34 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
     } catch (error) {
       console.error('Erreur lors de la récupération du statut:', error)
     }
-  }
+  }, [loadOrders])
 
   // Rafraîchir tous les statuts
-  const refreshAllStatuses = async () => {
+  const refreshAllStatuses = useCallback(async () => {
     setLoading(true)
-    await Promise.all(orders.map(order => refreshOrderStatus(order.id)))
+    const localOrders = getOrdersFromLocalStorage()
+    await Promise.all(localOrders.map(order => refreshOrderStatus(order.id)))
     setLoading(false)
-  }
+  }, [refreshOrderStatus])
+
+  // Charger les commandes au montage et quand la modal s'ouvre
+  useEffect(() => {
+    if (open) {
+      loadOrders()
+      refreshAllStatuses()
+    }
+  }, [open, loadOrders, refreshAllStatuses])
+
+  // Auto-rafraîchir toutes les 10 secondes quand la modal est ouverte
+  useEffect(() => {
+    if (!open || orders.length === 0) return
+
+    const interval = setInterval(() => {
+      refreshAllStatuses()
+    }, 10000) // 10 secondes
+
+    return () => clearInterval(interval)
+  }, [open, orders.length, refreshAllStatuses])
 
   // Annuler une commande
   const cancelOrder = async (orderId: string) => {
@@ -115,19 +129,10 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-bold">Mes Commandes</DialogTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={refreshAllStatuses}
-              disabled={loading || orders.length === 0}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Actualiser
-            </Button>
-          </div>
+          <DialogTitle className="text-lg font-bold">
+            Mes Commandes
+            {loading && <Loader2 className="inline h-4 w-4 ml-2 animate-spin text-muted-foreground" />}
+          </DialogTitle>
         </DialogHeader>
 
         {orders.length === 0 ? (

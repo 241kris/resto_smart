@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { use } from "react"
 import Image from "next/image"
 import { ShoppingCart, MapPin, Phone, Mail, Loader2, Minus, Plus, Receipt } from "lucide-react"
@@ -13,6 +13,7 @@ import { CartModal } from "@/components/CartModal"
 import { MyOrdersModal } from "@/components/MyOrdersModal"
 import { ImageCarousel } from "@/components/ImageCarousel"
 import { ImageThumbnails } from "@/components/ImageThumbnails"
+import { getOrdersFromLocalStorage } from "@/lib/orderStorage"
 
 interface PageProps {
   params: Promise<{
@@ -26,9 +27,23 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
   const [cartOpen, setCartOpen] = useState(false)
   const [ordersOpen, setOrdersOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [hasOrders, setHasOrders] = useState(false)
 
   const { data, isLoading, error } = useRestaurantMenu(restaurantId)
   const { addItem, updateQuantity, removeItem, isInCart, totalItems, totalPrice, items } = useCart()
+
+  // Vérifier s'il y a des commandes
+  useEffect(() => {
+    const checkOrders = () => {
+      const orders = getOrdersFromLocalStorage()
+      setHasOrders(orders.length > 0)
+    }
+    checkOrders()
+    // Revérifier quand la modal se ferme
+    if (!ordersOpen) {
+      checkOrders()
+    }
+  }, [ordersOpen])
 
   const filteredProducts = selectedCategory && data
     ? data.products.filter(product => product.categoryId === selectedCategory)
@@ -254,15 +269,17 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
       </div>
 
       {/* Bouton Mes Commandes */}
-      <div className="fixed bottom-6 left-6 z-40">
-        <Button
-          className="rounded-full shadow-2xl h-14 px-5 gap-2 hover:scale-105 transition-transform bg-blue-600 hover:bg-blue-700 text-white"
-          onClick={() => setOrdersOpen(true)}
-        >
-          <Receipt className="h-5 w-5" />
-          <span className="text-sm font-semibold">Mes Commandes</span>
-        </Button>
-      </div>
+      {hasOrders && (
+        <div className="fixed bottom-6 left-6 z-40">
+          <Button
+            className="rounded-full shadow-2xl h-14 px-5 gap-2 hover:scale-105 transition-transform bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setOrdersOpen(true)}
+          >
+            <Receipt className="h-5 w-5" />
+            <span className="text-sm font-semibold">Mes Commandes</span>
+          </Button>
+        </div>
+      )}
 
       {/* Bouton Panier Flottant */}
       {totalItems > 0 && (
