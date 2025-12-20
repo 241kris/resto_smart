@@ -13,6 +13,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useCategories } from "@/lib/hooks/useCategories"
 import type { Product, ProductFormData } from "@/lib/hooks/useProducts"
 import Image from "next/image"
@@ -145,10 +153,10 @@ export default function ProductFormModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Erreur globale */}
           {formError && (
-            <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <p className="text-sm">{formError}</p>
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
           )}
 
           {/* Image */}
@@ -214,20 +222,23 @@ export default function ProductFormModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie</Label>
-              <select
-                id="category"
+              <Select
                 value={formData.categoryId}
-                onChange={(e) => handleInputChange("categoryId", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-sm ring-offset-[hsl(var(--background))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onValueChange={(value) => handleInputChange("categoryId", value)}
                 disabled={isLoading}
               >
-                <option value="">Sans catégorie</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Sans catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sans catégorie</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

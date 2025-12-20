@@ -4,6 +4,8 @@ import { QueryClient } from '@tanstack/react-query';
 import { Geist, Geist_Mono, Modak } from "next/font/google";
 import "./globals.css";
 import Providers from './providers';
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const queryClient = new QueryClient();
 
@@ -25,10 +27,18 @@ const modak = Modak({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" >
+    <html lang="fr" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${modak.variable} antialiased`}>
         <Providers>
-          {children}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </Providers>
       </body>
     </html>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShoppingCart, Clock, CheckCircle, DollarSign, X, Loader2, RefreshCw } from "lucide-react"
 import { getOrdersFromLocalStorage, updateOrderStatusInLocalStorage, type StoredOrder } from "@/lib/orderStorage"
+import { toast } from "sonner"
 
 interface MyOrdersModalProps {
   open: boolean
@@ -70,11 +71,11 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
         updateOrderStatusInLocalStorage(orderId, 'CANCELLED')
         loadOrders()
       } else {
-        alert(data.error || 'Erreur lors de l\'annulation')
+        toast.error(data.error || 'Erreur lors de l\'annulation')
       }
     } catch (error) {
       console.error('Erreur lors de l\'annulation:', error)
-      alert('Erreur lors de l\'annulation de la commande')
+      toast.error('Erreur lors de l\'annulation de la commande')
     } finally {
       setCancellingOrderId(null)
     }

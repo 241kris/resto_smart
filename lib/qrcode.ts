@@ -1,46 +1,59 @@
-// ---------------------------------------
-//  Utilitaire de génération de QR Code
-// ---------------------------------------
-
 import QRCode from 'qrcode';
+import sharp from 'sharp';
 
 /**
- * Génère un QR Code en base64 à partir d'une URL
+ * Génère un QR Code avec le numéro de la table écrit au centre
  * @param url - L'URL à encoder dans le QR Code
+ * @param tableIdentifier - Le numéro ou le nom de la table (ex: 7, "12", "T-5")
  * @returns Promise<string> - L'image du QR Code en base64
  */
-export async function generateQRCode(url: string): Promise<string> {
+export async function generateQRCode(url: string, tableIdentifier: number | string): Promise<string> {
   try {
-    // Génère le QR Code en base64 (format data:image/png;base64,...)
-    const qrCodeDataUrl = await QRCode.toDataURL(url, {
-      width: 300,
+    const width = 300;
+    
+    // 1. Générer le QR Code de base en Buffer
+    // errorCorrectionLevel: 'H' est CRITIQUE pour permettre de masquer le centre sans corrompre le code
+    const qrBuffer = await QRCode.toBuffer(url, {
+      width: width,
       margin: 2,
       color: {
         dark: '#000000',
         light: '#FFFFFF'
-      }
+      },
+      errorCorrectionLevel: 'H' 
     });
 
-    return qrCodeDataUrl;
-  } catch (error) {
-    console.error('Erreur lors de la génération du QR Code:', error);
-    throw new Error('Impossible de générer le QR Code');
-  }
-}
+    // 2. Créer une image SVG contenant le numéro
+    // Un carré blanc avec coins arrondis + le texte centré
+    const textOverlay = `
+      <svg width="80" height="80" version="1.1" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="80" height="80" rx="10" ry="10" fill="white" />
+        <text 
+          x="50%" 
+          y="50%" 
+          text-anchor="middle" 
+          dominant-baseline="central" 
+          font-family="Arial, sans-serif" 
+          font-weight="800" 
+          font-size="28" 
+          fill="black"
+        >
+          ${tableIdentifier}
+        </text>
+      </svg>
+    `;
 
-/**
- * Génère un QR Code en buffer PNG
- * @param url - L'URL à encoder dans le QR Code
- * @returns Promise<Buffer> - L'image du QR Code en buffer
- */
-export async function generateQRCodeBuffer(url: string): Promise<Buffer> {
-  try {
-    const buffer = await QRCode.toBuffer(url, {
-      width: 300,
-      margin: 2,
-    });
+    // 3. Fusionner le QR Code et le Texte SVG avec Sharp
+    const finalImageBuffer = await sharp(qrBuffer)
+      .composite([{
+        input: Buffer.from(textOverlay),
+        gravity: 'center' // Place l'image pile au milieu
+      }])
+      .toBuffer();
 
-    return buffer;
+    // 4. Retourner en Base64
+    return `data:image/png;base64,${finalImageBuffer.toString('base64')}`;
+
   } catch (error) {
     console.error('Erreur lors de la génération du QR Code:', error);
     throw new Error('Impossible de générer le QR Code');

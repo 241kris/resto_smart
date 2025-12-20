@@ -11,6 +11,7 @@ import { useOrders, useUpdateOrderStatus, useDeleteOrder, type Order } from "@/l
 import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import { OrderNotification } from "./OrderNotification"
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF"
+import { toast } from "sonner"
 
 export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -93,7 +94,7 @@ export default function OrdersPage() {
 
   const handleDownloadInvoice = (order: Order) => {
     if (!establishment) {
-      alert('Impossible de générer la facture. Informations du restaurant manquantes.')
+      toast.error('Impossible de générer la facture. Informations du restaurant manquantes.')
       return
     }
 

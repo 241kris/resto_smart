@@ -1,8 +1,3 @@
-// ---------------------------------------
-//  API Route: POST /api/tables
-//  Crée une nouvelle table avec QR Code
-// ---------------------------------------
-
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { generateQRCode } from '@/lib/qrcode';
@@ -11,7 +6,7 @@ import { uploadImageToSupabase } from '@/lib/uploadImage';
 
 /**
  * POST /api/tables
- * Crée une nouvelle table pour un restaurant avec QR Code
+ * Crée une nouvelle table pour un restaurant avec QR Code numéroté
  */
 export async function POST(request: NextRequest) {
   try {
@@ -53,8 +48,9 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const qrUrl = `${baseUrl}/t/${restaurantId}/table/${tableToken}`;
 
-    // 6. Générer l'image du QR Code (en base64)
-    const qrCodeImage = await generateQRCode(qrUrl);
+    // 6. Générer l'image du QR Code avec le numéro au centre
+    // MODIFICATION ICI : On passe le numéro "number" en 2ème argument
+    const qrCodeImage = await generateQRCode(qrUrl, number);
 
     // 7. Upload du QR Code sur Supabase
     const qrCodeFileName = `${restaurantId}/table-${number}-${tableToken}.png`;
@@ -94,7 +90,7 @@ export async function POST(request: NextRequest) {
         createdAt: newTable.createdAt,
         updatedAt: newTable.updatedAt,
       },
-      qrCode: qrCodeImage, // Image en base64 (data:image/png;base64,...)
+      qrCode: qrCodeImage,
     }, { status: 201 });
 
   } catch (error) {
@@ -109,7 +105,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 /**
  * GET /api/tables?restaurantId=xxx
  * Récupère toutes les tables d'un restaurant

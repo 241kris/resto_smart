@@ -1,8 +1,3 @@
-// ---------------------------------------
-//  API Route: POST /api/tables/bulk
-//  Crée plusieurs tables à la fois avec QR Codes
-// ---------------------------------------
-
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { generateQRCode } from '@/lib/qrcode';
@@ -11,7 +6,7 @@ import { uploadImageToSupabase } from '@/lib/uploadImage';
 
 /**
  * POST /api/tables/bulk
- * Crée plusieurs tables à la fois pour un restaurant avec QR Codes
+ * Crée plusieurs tables à la fois pour un restaurant avec QR Codes numérotés
  */
 export async function POST(request: NextRequest) {
   try {
@@ -64,8 +59,9 @@ export async function POST(request: NextRequest) {
       const qrUrl = `${baseUrl}/t/${restaurantId}/table/${tableToken}`;
       const qrCodeFileName = `${restaurantId}/table-${tableNumber}-${tableToken}.png`;
 
-      // Générer le QR Code (base64)
-      const qrCodeImage = await generateQRCode(qrUrl);
+      // Générer le QR Code avec le numéro de la table au centre
+      // MODIFICATION ICI : On passe tableNumber en 2ème argument
+      const qrCodeImage = await generateQRCode(qrUrl, tableNumber);
 
       // Upload du QR Code sur Supabase
       let qrCodePath: string;

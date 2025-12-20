@@ -5,7 +5,10 @@
       "Bash(npx shadcn@latest add button card input label table dialog drawer select textarea badge separator avatar dropdown-menu)",
       "Bash(npm install:*)",
       "Bash(mkdir:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(yes:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

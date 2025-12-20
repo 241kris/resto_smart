@@ -3,22 +3,116 @@
 import { Download, QrCode as QrIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useTables } from "@/lib/hooks/useTables"
 import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import { CreateTablesModal } from "@/components/CreateTablesModal"
 import Image from "next/image"
+import { useState } from "react"
+import JSZip from "jszip"
+import { saveAs } from "file-saver"
+import { toast } from "sonner"
 
 export default function TablesPage() {
   const { data: establishmentData } = useEstablishment()
   const establishment = establishmentData?.establishment
   const { data: tablesData, isLoading } = useTables(establishment?.id)
   const tables = tablesData?.tables || []
+  
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set())
+  const [isDownloading, setIsDownloading] = useState(false)
 
-  const downloadQR = (tableNumber: number, qrCodePath: string) => {
-    const link = document.createElement("a")
-    link.download = `table-${tableNumber}-QR.png`
-    link.href = qrCodePath
-    link.click()
+  const toggleTableSelection = (tableId: string) => {
+    const newSelected = new Set(selectedTables)
+    if (newSelected.has(tableId)) {
+      newSelected.delete(tableId)
+    } else {
+      newSelected.add(tableId)
+    }
+    setSelectedTables(newSelected)
+  }
+
+  const selectAll = () => {
+    if (selectedTables.size === tables.length) {
+      setSelectedTables(new Set())
+    } else {
+      setSelectedTables(new Set(tables.map(t => t.id)))
+    }
+  }
+
+  const downloadQRAsBlob = async (qrCodePath: string): Promise<Blob> => {
+    const response = await fetch(qrCodePath)
+    if (!response.ok) throw new Error('Failed to fetch QR code')
+    return await response.blob()
+  }
+
+  const downloadSingleQR = async (tableNumber: number, qrCodePath: string) => {
+    try {
+      const blob = await downloadQRAsBlob(qrCodePath)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.download = `table-${tableNumber}-QR.png`
+      link.href = url
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading QR code:', error)
+      toast.error('Erreur lors du téléchargement du code QR')
+    }
+  }
+
+  const downloadSelectedQRs = async () => {
+    if (selectedTables.size === 0) return
+    
+    setIsDownloading(true)
+    try {
+      const zip = new JSZip()
+      const selectedTablesList = tables.filter(t => selectedTables.has(t.id))
+
+      for (const table of selectedTablesList) {
+        try {
+          const blob = await downloadQRAsBlob(table.qrCodePath)
+          zip.file(`table-${table.number}-QR.png`, blob)
+        } catch (error) {
+          console.error(`Error downloading QR for table ${table.number}:`, error)
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" })
+      saveAs(content, `qr-codes-${establishment?.name || 'tables'}.zip`)
+      setSelectedTables(new Set())
+    } catch (error) {
+      console.error('Error creating zip:', error)
+      toast.error('Erreur lors de la création du fichier ZIP')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const downloadAllQRs = async () => {
+    if (tables.length === 0) return
+    
+    setIsDownloading(true)
+    try {
+      const zip = new JSZip()
+
+      for (const table of tables) {
+        try {
+          const blob = await downloadQRAsBlob(table.qrCodePath)
+          zip.file(`table-${table.number}-QR.png`, blob)
+        } catch (error) {
+          console.error(`Error downloading QR for table ${table.number}:`, error)
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" })
+      saveAs(content, `qr-codes-${establishment?.name || 'tables'}-all.zip`)
+    } catch (error) {
+      console.error('Error creating zip:', error)
+      toast.error('Erreur lors de la création du fichier ZIP')
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   if (!establishment) {
@@ -71,6 +165,53 @@ export default function TablesPage() {
         </Card>
       </div>
 
+      {/* Bulk Actions */}
+      {!isLoading && tables.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAll}
+                >
+                  {selectedTables.size === tables.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                </Button>
+                {selectedTables.size > 0 && (
+                  <span className="text-sm text-[hsl(var(--muted-foreground))]">
+                    {selectedTables.size} table(s) sélectionnée(s)
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {selectedTables.size > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={downloadSelectedQRs}
+                    disabled={isDownloading}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isDownloading ? 'Téléchargement...' : `Télécharger la sélection (${selectedTables.size})`}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={downloadAllQRs}
+                  disabled={isDownloading}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isDownloading ? 'Téléchargement...' : 'Télécharger tout'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Loading State */}
       {isLoading && (
         <div className="text-center py-8">
@@ -96,6 +237,12 @@ export default function TablesPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {tables.map((table) => (
             <Card key={table.id} className="relative">
+              <div className="absolute top-4 right-4 z-10">
+                <Checkbox
+                  checked={selectedTables.has(table.id)}
+                  onCheckedChange={() => toggleTableSelection(table.id)}
+                />
+              </div>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrIcon className="h-5 w-5 text-[hsl(var(--primary))]" />
@@ -123,7 +270,7 @@ export default function TablesPage() {
                     <Button
                       size="sm"
                       className="flex-1 gap-2"
-                      onClick={() => downloadQR(table.number, table.qrCodePath)}
+                      onClick={() => downloadSingleQR(table.number, table.qrCodePath)}
                     >
                       <Download className="h-4 w-4" />
                       Télécharger
@@ -152,7 +299,7 @@ export default function TablesPage() {
             3. Un code QR unique est automatiquement généré pour chaque table
           </p>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            4. Téléchargez et imprimez les codes QR pour les placer sur vos tables
+            4. Téléchargez les codes QR individuellement, par sélection ou tous en même temps
           </p>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             5. Les clients scannent le code pour accéder au menu du restaurant

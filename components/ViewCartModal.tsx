@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { useCart } from "@/lib/contexts/CartContext"
 import { CustomerForm, type CustomerData } from "./CustomerForm"
 import { saveOrderToLocalStorage } from "@/lib/orderStorage"
+import { toast } from "sonner"
 
 interface ViewCartModalProps {
   open: boolean
@@ -83,7 +84,7 @@ export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName
 
     } catch (error) {
       console.error('Erreur lors de la soumission de la commande:', error)
-      alert(error instanceof Error ? error.message : 'Erreur lors de la commande')
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la commande')
     } finally {
       setIsSubmitting(false)
     }
