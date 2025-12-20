@@ -3,10 +3,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Package, TrendingUp, ShoppingCart, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Package, TrendingUp, ShoppingCart, Loader2, Download, FileText } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import Image from "next/image"
 import { Bar } from 'react-chartjs-2'
+import { generateInventoryPDF, generateInventoryWord } from "@/lib/generateInventoryDocument"
+import { useEstablishment } from "@/lib/hooks/useEstablishment"
+import { toast } from "sonner"
 
 interface ProductStats {
   productId: string
@@ -48,6 +53,30 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
       return response.json()
     }
   })
+
+  // Récupérer les informations de l'établissement
+  const { data: establishmentData } = useEstablishment()
+  const establishment = establishmentData?.establishment
+
+  // Fonction pour télécharger le PDF
+  const handleDownloadPDF = () => {
+    if (!data || !establishment) {
+      toast.error('Impossible de générer le document. Données manquantes.')
+      return
+    }
+    generateInventoryPDF(data, establishment.name)
+    toast.success('Document PDF téléchargé avec succès !')
+  }
+
+  // Fonction pour télécharger le Word
+  const handleDownloadWord = async () => {
+    if (!data || !establishment) {
+      toast.error('Impossible de générer le document. Données manquantes.')
+      return
+    }
+    await generateInventoryWord(data, establishment.name)
+    toast.success('Document Word téléchargé avec succès !')
+  }
 
   // Préparer les données pour les graphiques (tous les produits, limités à 20 pour la lisibilité)
   const top20Products = data?.products.slice(0, 20) || []
@@ -204,10 +233,32 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
       {/* Tableau détaillé de tous les produits */}
       <Card>
         <CardHeader>
-          <CardTitle>Détails par Produit</CardTitle>
-          <CardDescription>
-            Liste complète de tous les produits avec leurs statistiques de vente ({data.products.length} produits)
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Détails par Produit</CardTitle>
+              <CardDescription>
+                Liste complète de tous les produits avec leurs statistiques de vente ({data.products.length} produits)
+              </CardDescription>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Télécharger l'inventaire
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadPDF} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Télécharger en PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadWord} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Télécharger en Word (DOCX)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -268,7 +319,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className={product.orderCount > 0 ? 'font-medium' : 'text-muted-foreground'}>
+                        <span className={product.orderCount > 0 ? 'font-medium text-purple-600' : 'text-muted-foreground'}>
                           {product.orderCount}
                         </span>
                       </TableCell>

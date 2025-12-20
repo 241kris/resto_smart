@@ -1,27 +1,43 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle, FileText, User, Phone, MapPin } from "lucide-react"
+import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle, FileText, User, Phone, MapPin, Calendar as CalendarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { useOrders, useUpdateOrderStatus, useDeleteOrder, type Order } from "@/lib/hooks/useOrders"
 import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import { OrderNotification } from "./OrderNotification"
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF"
 import { toast } from "sonner"
+import { format, isToday, isYesterday, subDays } from "date-fns"
+import { fr } from "date-fns/locale"
 
 export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
-  const [period, setPeriod] = useState<'today' | 'yesterday' | 'day-before-yesterday'>('today')
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
+  // Convertir la date sélectionnée en période pour l'API
+  const getPeriodFromDate = (date: Date): 'today' | 'yesterday' | 'day-before-yesterday' => {
+    if (isToday(date)) return 'today'
+    if (isYesterday(date)) return 'yesterday'
+    const dayBeforeYesterday = subDays(new Date(), 2)
+    if (format(date, 'yyyy-MM-dd') === format(dayBeforeYesterday, 'yyyy-MM-dd')) {
+      return 'day-before-yesterday'
+    }
+    return 'today' // Par défaut
+  }
+
+  const period = getPeriodFromDate(selectedDate)
   const { data, isLoading } = useOrders(period)
   const { data: establishmentData } = useEstablishment()
   const updateStatus = useUpdateOrderStatus()
@@ -132,17 +148,70 @@ export default function OrdersPage() {
           </p>
         </div>
 
-        {/* Filtre par période */}
-        <Select value={period} onValueChange={(value) => setPeriod(value as typeof period)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Sélectionner période" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Aujourd'hui</SelectItem>
-            <SelectItem value="yesterday">Hier</SelectItem>
-            <SelectItem value="day-before-yesterday">Avant-hier</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Filtre par date avec calendrier */}
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-[240px] justify-start text-left font-normal"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <div className="p-3 border-b space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  variant={isToday(selectedDate) ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedDate(new Date())
+                    setCalendarOpen(false)
+                  }}
+                >
+                  Aujourd'hui
+                </Button>
+                <Button
+                  variant={isYesterday(selectedDate) ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedDate(subDays(new Date(), 1))
+                    setCalendarOpen(false)
+                  }}
+                >
+                  Hier
+                </Button>
+                <Button
+                  variant={format(selectedDate, 'yyyy-MM-dd') === format(subDays(new Date(), 2), 'yyyy-MM-dd') ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedDate(subDays(new Date(), 2))
+                    setCalendarOpen(false)
+                  }}
+                >
+                  Avant-hier
+                </Button>
+              </div>
+            </div>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  setSelectedDate(date)
+                  setCalendarOpen(false)
+                }
+              }}
+              initialFocus
+              locale={fr}
+              disabled={(date) => date > new Date()}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Stats */}
@@ -218,10 +287,10 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center">
                             <span className="text-xs font-semibold text-[hsl(var(--primary))]">
-                              {order.table.number}
+                              {order.table.name}
                             </span>
                           </div>
-                          Table {order.table.number}
+                          Table {order.table.name}
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -312,10 +381,10 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                             <span className="text-xs font-semibold text-primary">
-                              {selectedOrder.table.number}
+                              {selectedOrder.table.name}
                             </span>
                           </div>
-                          <span className="font-semibold text-sm">Table {selectedOrder.table.number}</span>
+                          <span className="font-semibold text-sm">Table {selectedOrder.table.name}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface Table {
   id: string
-  number: number
+  name: string // Changé de 'number' à 'name'
   tableToken: string
   qrUrl: string
   qrCodePath: string
@@ -15,19 +15,15 @@ export interface Table {
   updatedAt: string
 }
 
-export interface CreateTablesData {
+export interface CreateTableData {
   restaurantId: string
-  count: number
+  name: string
 }
 
-export interface CreateTablesResponse {
+export interface CreateTableResponse {
   success: boolean
-  tables: Table[]
-  qrCodes: Array<{
-    tableId: string
-    tableNumber: number
-    qrCodePath: string
-  }>
+  table: Table
+  qrCode: string
 }
 
 // Hook pour récupérer toutes les tables d'un restaurant
@@ -49,13 +45,13 @@ export function useTables(restaurantId?: string) {
   })
 }
 
-// Hook pour créer plusieurs tables à la fois
-export function useCreateTables() {
+// Hook pour créer une seule table
+export function useCreateTable() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: CreateTablesData) => {
-      const response = await fetch('/api/tables/bulk', {
+    mutationFn: async (data: CreateTableData) => {
+      const response = await fetch('/api/tables', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,10 +61,10 @@ export function useCreateTables() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la création des tables')
+        throw new Error(error.error || 'Erreur lors de la création de la table')
       }
 
-      return response.json() as Promise<CreateTablesResponse>
+      return response.json() as Promise<CreateTableResponse>
     },
     onSuccess: (_data, variables) => {
       // Invalider et refetch les données des tables

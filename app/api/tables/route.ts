@@ -6,18 +6,18 @@ import { uploadImageToSupabase } from '@/lib/uploadImage';
 
 /**
  * POST /api/tables
- * Crée une nouvelle table pour un restaurant avec QR Code numéroté
+ * Crée une nouvelle table pour un restaurant avec QR Code personnalisé
  */
 export async function POST(request: NextRequest) {
   try {
     // 1. Récupérer les données du body
     const body = await request.json();
-    const { number, restaurantId } = body;
+    const { name, restaurantId } = body;
 
     // 2. Validation des données
-    if (!number || typeof number !== 'number') {
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json(
-        { error: 'Le numéro de table est requis et doit être un nombre' },
+        { error: 'Le nom de la table est requis' },
         { status: 400 }
       );
     }
@@ -25,6 +25,15 @@ export async function POST(request: NextRequest) {
     if (!restaurantId || typeof restaurantId !== 'string') {
       return NextResponse.json(
         { error: 'L\'ID du restaurant est requis' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedName = name.trim();
+
+    if (trimmedName.length > 20) {
+      return NextResponse.json(
+        { error: 'Le nom de la table ne peut pas dépasser 20 caractères' },
         { status: 400 }
       );
     }
@@ -41,19 +50,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Générer un token unique pour la table
+    // 4. Vérifier que le nom de la table est unique pour ce restaurant
+    const existingTable = await prisma.table.findFirst({
+      where: {
+        restaurantId,
+        name: trimmedName
+      }
+    });
+
+    if (existingTable) {
+      return NextResponse.json(
+        { error: `Une table avec le nom "${trimmedName}" existe déjà` },
+        { status: 400 }
+      );
+    }
+
+    // 5. Générer un token unique pour la table
     const tableToken = nanoid(10);
 
-    // 5. Construire l'URL personnalisée pour le QR Code
+    // 6. Construire l'URL personnalisée pour le QR Code
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const qrUrl = `${baseUrl}/t/${restaurantId}/table/${tableToken}`;
 
-    // 6. Générer l'image du QR Code avec le numéro au centre
-    // MODIFICATION ICI : On passe le numéro "number" en 2ème argument
-    const qrCodeImage = await generateQRCode(qrUrl, number);
+    // 7. Générer l'image du QR Code avec le nom au centre
+    const qrCodeImage = await generateQRCode(qrUrl, trimmedName);
 
-    // 7. Upload du QR Code sur Supabase
-    const qrCodeFileName = `${restaurantId}/table-${number}-${tableToken}.png`;
+    // 8. Upload du QR Code sur Supabase
+    const qrCodeFileName = `${restaurantId}/table-${trimmedName}-${tableToken}.png`;
     let qrCodePath: string;
 
     try {
@@ -66,10 +89,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Sauvegarder la table dans la base de données
+    // 9. Sauvegarder la table dans la base de données
     const newTable = await prisma.table.create({
       data: {
-        number,
+        name: trimmedName,
         restaurantId,
         tableToken,
         qrUrl,
@@ -77,12 +100,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 9. Retourner la réponse avec les données de la table et le QR Code
+    // 10. Retourner la réponse avec les données de la table et le QR Code
     return NextResponse.json({
       success: true,
       table: {
         id: newTable.id,
-        number: newTable.number,
+        name: newTable.name,
         tableToken: newTable.tableToken,
         qrUrl: newTable.qrUrl,
         qrCodePath: newTable.qrCodePath,
@@ -123,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     const tables = await prisma.table.findMany({
       where: { restaurantId },
-      orderBy: { number: 'asc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         restaurant: {
           select: {

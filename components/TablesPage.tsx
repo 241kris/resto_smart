@@ -46,12 +46,12 @@ export default function TablesPage() {
     return await response.blob()
   }
 
-  const downloadSingleQR = async (tableNumber: number, qrCodePath: string) => {
+  const downloadSingleQR = async (tableName: string, qrCodePath: string) => {
     try {
       const blob = await downloadQRAsBlob(qrCodePath)
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
-      link.download = `table-${tableNumber}-QR.png`
+      link.download = `table-${tableName}-QR.png`
       link.href = url
       link.click()
       URL.revokeObjectURL(url)
@@ -72,9 +72,9 @@ export default function TablesPage() {
       for (const table of selectedTablesList) {
         try {
           const blob = await downloadQRAsBlob(table.qrCodePath)
-          zip.file(`table-${table.number}-QR.png`, blob)
+          zip.file(`table-${table.name}-QR.png`, blob)
         } catch (error) {
-          console.error(`Error downloading QR for table ${table.number}:`, error)
+          console.error(`Error downloading QR for table ${table.name}:`, error)
         }
       }
 
@@ -99,9 +99,9 @@ export default function TablesPage() {
       for (const table of tables) {
         try {
           const blob = await downloadQRAsBlob(table.qrCodePath)
-          zip.file(`table-${table.number}-QR.png`, blob)
+          zip.file(`table-${table.name}-QR.png`, blob)
         } catch (error) {
-          console.error(`Error downloading QR for table ${table.number}:`, error)
+          console.error(`Error downloading QR for table ${table.name}:`, error)
         }
       }
 
@@ -246,7 +246,7 @@ export default function TablesPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrIcon className="h-5 w-5 text-[hsl(var(--primary))]" />
-                  Table {table.number}
+                  Table {table.name}
                 </CardTitle>
                 <CardDescription className="text-xs break-all">
                   Token: {table.tableToken}
@@ -258,7 +258,7 @@ export default function TablesPage() {
                   <div className="bg-white p-4 rounded-lg border">
                     <Image
                       src={table.qrCodePath}
-                      alt={`QR Code Table ${table.number}`}
+                      alt={`QR Code Table ${table.name}`}
                       width={200}
                       height={200}
                       className="w-full h-auto"
@@ -270,7 +270,7 @@ export default function TablesPage() {
                     <Button
                       size="sm"
                       className="flex-1 gap-2"
-                      onClick={() => downloadSingleQR(table.number, table.qrCodePath)}
+                      onClick={() => downloadSingleQR(table.name, table.qrCodePath)}
                     >
                       <Download className="h-4 w-4" />
                       Télécharger

@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useCreateTables } from "@/lib/hooks/useTables"
+import { useCreateTable } from "@/lib/hooks/useTables"
 
 interface CreateTablesModalProps {
   restaurantId: string
@@ -22,29 +22,36 @@ interface CreateTablesModalProps {
 
 export function CreateTablesModal({ restaurantId, existingTableCount }: CreateTablesModalProps) {
   const [open, setOpen] = useState(false)
-  const [count, setCount] = useState<number>(1)
+  const [tableName, setTableName] = useState<string>("")
   const [error, setError] = useState<string>("")
-  const { mutate: createTables, isPending } = useCreateTables()
+  const { mutate: createTable, isPending } = useCreateTable()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (count < 1 || count > 50) {
-      setError("Le nombre de tables doit être entre 1 et 50")
+    // Validation du nom de table
+    const trimmedName = tableName.trim()
+    if (!trimmedName) {
+      setError("Le nom de la table est requis")
       return
     }
 
-    createTables(
-      { restaurantId, count },
+    if (trimmedName.length > 20) {
+      setError("Le nom de la table ne peut pas dépasser 20 caractères")
+      return
+    }
+
+    createTable(
+      { restaurantId, name: trimmedName },
       {
         onSuccess: () => {
           setOpen(false)
-          setCount(1)
+          setTableName("")
           setError("")
         },
         onError: (error) => {
-          setError(error.message || "Impossible de créer les tables")
+          setError(error.message || "Impossible de créer la table")
         },
       }
     )
@@ -59,36 +66,30 @@ export function CreateTablesModal({ restaurantId, existingTableCount }: CreateTa
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Créer de nouvelles tables</DialogTitle>
+            <DialogTitle>Créer une nouvelle table</DialogTitle>
             <DialogDescription>
               {existingTableCount > 0
-                ? `Vous avez déjà ${existingTableCount} table(s). Les nouvelles tables commenceront au numéro ${existingTableCount + 1}.`
-                : "Créez vos premières tables avec des codes QR uniques."}
+                ? `Vous avez déjà ${existingTableCount} table(s). Donnez un nom unique à votre nouvelle table.`
+                : "Créez votre première table avec un code QR unique."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="count">Nombre de tables à créer</Label>
+              <Label htmlFor="tableName">Nom de la table</Label>
               <Input
-                id="count"
-                type="number"
-                min="1"
-                max="50"
-                value={count}
-                onChange={(e) => setCount(parseInt(e.target.value) || 1)}
-                placeholder="Ex: 5"
+                id="tableName"
+                type="text"
+                value={tableName}
+                onChange={(e) => setTableName(e.target.value)}
+                placeholder="Ex: 1, A, T25, VIP, etc."
                 disabled={isPending}
+                maxLength={20}
               />
               <p className="text-xs text-muted-foreground">
-                {count > 0 && existingTableCount >= 0 && (
-                  <>
-                    Création des tables {existingTableCount + 1} à{" "}
-                    {existingTableCount + count}
-                  </>
-                )}
+                Utilisez des chiffres (1, 25) ou des lettres (A, VIP, T12) pour identifier votre table
               </p>
               {error && (
-                <p className="text-xs text-red-500">{error}</p>
+                <p className="text-xs text-destructive">{error}</p>
               )}
             </div>
           </div>

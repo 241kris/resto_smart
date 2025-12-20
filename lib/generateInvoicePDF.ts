@@ -114,7 +114,7 @@ export function generateInvoicePDF(order: InvoiceOrder, establishment: Establish
   if (order.table) {
     doc.text('Table:', 20, currentY)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Table ${order.table.number}`, 55, currentY)
+    doc.text(`Table ${order.table.name}`, 55, currentY)
   } else {
     doc.text('Type:', 20, currentY)
     doc.setFont('helvetica', 'normal')
@@ -308,7 +308,7 @@ export function generateInvoicePDF(order: InvoiceOrder, establishment: Establish
   // Générer le nom du fichier
   const dateStr = new Date(order.createdAt).toLocaleDateString('fr-FR').replace(/\//g, '-')
   const fileName = order.table
-    ? `Facture_${order.id.slice(0, 8)}_Table${order.table.number}_${dateStr}.pdf`
+    ? `Facture_${order.id.slice(0, 8)}_Table${order.table.name}_${dateStr}.pdf`
     : `Facture_${order.id.slice(0, 8)}_Public_${dateStr}.pdf`
 
   // Télécharger le PDF

@@ -87,7 +87,7 @@ model Product {
 model Table {
   id          String @id @default(cuid())
   // ID interne unique
-  number      Int // Numéro visible (peut se répéter)
+  name        String // Nom de la table (chiffres ou lettres: 1, A, VIP, T25, etc.)
   tableToken  String @unique // Token unique pour QR / URL
   qrUrl       String // URL complète encodée dans le QR Code
   qrCodePath  String // Chemin vers l'image QR Code dans /public
@@ -99,6 +99,8 @@ model Table {
   updatedAt DateTime @updatedAt
 
   orders Order[]
+
+  @@unique([restaurantId, name]) // Un restaurant ne peut pas avoir deux tables avec le même nom
 }
 
 
