@@ -47,7 +47,7 @@ export default function ProductFormModal({
     name: "",
     description: "",
     price: 0,
-    categoryId: "",
+    categoryId: "NONE",
     image: ""
   })
   const [imagePreview, setImagePreview] = useState<string>("")
@@ -61,7 +61,7 @@ export default function ProductFormModal({
         name: product.name,
         description: product.description || "",
         price: product.price,
-        categoryId: product.categoryId || "",
+        categoryId: product.categoryId || "NONE",
         image: product.image || ""
       })
       setImagePreview(product.image || "")
@@ -70,7 +70,7 @@ export default function ProductFormModal({
         name: "",
         description: "",
         price: 0,
-        categoryId: "",
+        categoryId: "NONE",
         image: ""
       })
       setImagePreview("")
@@ -134,7 +134,12 @@ export default function ProductFormModal({
     }
 
     try {
-      await onSubmit(formData)
+      // Convertir "NONE" en chaîne vide pour le backend
+      const submitData = {
+        ...formData,
+        categoryId: formData.categoryId === "NONE" ? "" : formData.categoryId
+      }
+      await onSubmit(submitData)
     } catch (error) {
       setFormError((error as Error).message)
     }
@@ -231,7 +236,7 @@ export default function ProductFormModal({
                   <SelectValue placeholder="Sans catégorie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sans catégorie</SelectItem>
+                  <SelectItem value="NONE">Sans catégorie</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
