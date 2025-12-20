@@ -1,10 +1,18 @@
 "use client"
 
-import { Download, QrCode as QrIcon } from "lucide-react"
+import { Download, QrCode as QrIcon, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useTables } from "@/lib/hooks/useTables"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useTables, useDeleteTables } from "@/lib/hooks/useTables"
 import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import { CreateTablesModal } from "@/components/CreateTablesModal"
 import Image from "next/image"
@@ -18,9 +26,11 @@ export default function TablesPage() {
   const establishment = establishmentData?.establishment
   const { data: tablesData, isLoading } = useTables(establishment?.id)
   const tables = tablesData?.tables || []
-  
+  const { mutate: deleteTables, isPending: isDeleting } = useDeleteTables()
+
   const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set())
   const [isDownloading, setIsDownloading] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const toggleTableSelection = (tableId: string) => {
     const newSelected = new Set(selectedTables)
@@ -91,7 +101,7 @@ export default function TablesPage() {
 
   const downloadAllQRs = async () => {
     if (tables.length === 0) return
-    
+
     setIsDownloading(true)
     try {
       const zip = new JSZip()
@@ -113,6 +123,26 @@ export default function TablesPage() {
     } finally {
       setIsDownloading(false)
     }
+  }
+
+  const handleDeleteTables = () => {
+    if (!establishment) return
+
+    const tableIds = Array.from(selectedTables)
+
+    deleteTables(
+      { tableIds, restaurantId: establishment.id },
+      {
+        onSuccess: (data) => {
+          toast.success(data.message)
+          setSelectedTables(new Set())
+          setShowDeleteDialog(false)
+        },
+        onError: (error) => {
+          toast.error(error.message || 'Erreur lors de la suppression des tables')
+        },
+      }
+    )
   }
 
   if (!establishment) {
@@ -186,15 +216,27 @@ export default function TablesPage() {
               </div>
               <div className="flex gap-2">
                 {selectedTables.size > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={downloadSelectedQRs}
-                    disabled={isDownloading}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    {isDownloading ? 'Téléchargement...' : `Télécharger la sélection (${selectedTables.size})`}
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setShowDeleteDialog(true)}
+                      disabled={isDeleting}
+                      className="gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isDeleting ? 'Suppression...' : `Supprimer (${selectedTables.size})`}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={downloadSelectedQRs}
+                      disabled={isDownloading}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      {isDownloading ? 'Téléchargement...' : `Télécharger la sélection (${selectedTables.size})`}
+                    </Button>
+                  </>
                 )}
                 <Button
                   size="sm"
@@ -293,7 +335,7 @@ export default function TablesPage() {
             1. Créez de nouvelles tables en cliquant sur le bouton "Nouvelle table"
           </p>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            2. Spécifiez le nombre de tables à créer (elles seront numérotées automatiquement)
+            2. Donnez un nom unique à chaque table (chiffres ou lettres)
           </p>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             3. Un code QR unique est automatiquement généré pour chaque table
@@ -306,6 +348,38 @@ export default function TablesPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer {selectedTables.size} table(s) ?
+              <br />
+              <span className="font-semibold text-destructive">
+                Cette action est irréversible et supprimera définitivement les tables ainsi que leurs codes QR.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTables}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Suppression...' : 'Supprimer définitivement'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

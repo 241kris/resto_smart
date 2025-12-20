@@ -73,3 +73,31 @@ export function useCreateTable() {
   })
 }
 
+// Hook pour supprimer plusieurs tables
+export function useDeleteTables() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: { tableIds: string[]; restaurantId: string }) => {
+      const response = await fetch('/api/tables', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tableIds: data.tableIds }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression des tables')
+      }
+
+      return response.json() as Promise<{ success: boolean; message: string; deletedCount: number }>
+    },
+    onSuccess: (_data, variables) => {
+      // Invalider et refetch les données des tables
+      queryClient.invalidateQueries({ queryKey: ['tables', variables.restaurantId] })
+    },
+  })
+}
+
