@@ -39,11 +39,11 @@ export interface OrdersResponse {
 }
 
 // Hook pour récupérer toutes les commandes
-export function useOrders() {
+export function useOrders(period: 'today' | 'yesterday' | 'day-before-yesterday' = 'today') {
   return useQuery<OrdersResponse>({
-    queryKey: ['orders'],
+    queryKey: ['orders', period],
     queryFn: async () => {
-      const response = await fetch('/api/orders')
+      const response = await fetch(`/api/orders?period=${period}`)
 
       if (!response.ok) {
         const error = await response.json()

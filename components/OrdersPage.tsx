@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle, FileText } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ShoppingCart, Eye, Clock, CheckCircle, Trash2, DollarSign, Loader2, AlertTriangle, FileText, User, Phone, MapPin } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useOrders, useUpdateOrderStatus, useDeleteOrder, type Order } from "@/lib/hooks/useOrders"
@@ -18,8 +20,9 @@ export default function OrdersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null)
+  const [period, setPeriod] = useState<'today' | 'yesterday' | 'day-before-yesterday'>('today')
 
-  const { data, isLoading } = useOrders()
+  const { data, isLoading } = useOrders(period)
   const { data: establishmentData } = useEstablishment()
   const updateStatus = useUpdateOrderStatus()
   const deleteOrder = useDeleteOrder()
@@ -121,11 +124,25 @@ export default function OrdersPage() {
       <OrderNotification hasPendingOrders={pendingOrdersCount > 0} />
 
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Commandes</h1>
-        <p className="text-[hsl(var(--muted-foreground))]">
-          Suivez et gérez toutes vos commandes
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Commandes</h1>
+          <p className="text-muted-foreground">
+            Suivez et gérez toutes vos commandes
+          </p>
+        </div>
+
+        {/* Filtre par période */}
+        <Select value={period} onValueChange={(value) => setPeriod(value as typeof period)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Sélectionner période" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">Aujourd'hui</SelectItem>
+            <SelectItem value="yesterday">Hier</SelectItem>
+            <SelectItem value="day-before-yesterday">Avant-hier</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Stats */}
@@ -252,7 +269,7 @@ export default function OrdersPage() {
                             <FileText className="h-4 w-4" />
                           </Button>
                         )}
-                        {(order.status === "PENDING" || order.status === "CANCELLED") && (
+                        {(order.status === "PENDING" || order.status === "completed") && (
                           <Button
                             variant="destructive"
                             size="sm"
@@ -275,7 +292,7 @@ export default function OrdersPage() {
 
       {/* Order Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Commande #{selectedOrder?.id.slice(0, 8)}</span>
@@ -284,108 +301,151 @@ export default function OrdersPage() {
           </DialogHeader>
 
           {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-[hsl(var(--muted))]/50 border border-gray-300 rounded-lg">
-                <div>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">Table</p>
-                  {selectedOrder.table ? (
-                    <p className="font-semibold text-sm">Table {selectedOrder.table.number}</p>
-                  ) : (
-                    <p className="font-semibold text-sm text-orange-600">Commande publique</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">Date/Heure</p>
-                  <p className="font-semibold text-sm">{formatDate(selectedOrder.createdAt)}</p>
-                </div>
-              </div>
+            <div className="space-y-3">
+              {/* Informations générales */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Table</p>
+                      {selectedOrder.table ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-semibold text-primary">
+                              {selectedOrder.table.number}
+                            </span>
+                          </div>
+                          <span className="font-semibold text-sm">Table {selectedOrder.table.number}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <ShoppingCart className="h-3.5 w-3.5 text-orange-600" />
+                          <span className="font-semibold text-sm text-orange-600">Commande publique</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Date/Heure</p>
+                      <p className="font-semibold text-sm">{formatDate(selectedOrder.createdAt)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Informations Client pour commandes publiques */}
               {!selectedOrder.table && selectedOrder.customer && (
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                  <h3 className="font-semibold mb-3 text-orange-900">Informations Client</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-orange-700">Prénom</p>
-                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).firstName}</p>
+                <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-3.5 w-3.5" />
+                      Informations Client
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Prénom</p>
+                        <p className="font-medium text-sm">{(selectedOrder.customer as any).firstName}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Nom</p>
+                        <p className="font-medium text-sm">{(selectedOrder.customer as any).lastName}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          Téléphone
+                        </p>
+                        <p className="font-medium text-sm">{(selectedOrder.customer as any).phone}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Adresse
+                        </p>
+                        <p className="font-medium text-sm">{(selectedOrder.customer as any).address}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-orange-700">Nom</p>
-                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).lastName}</p>
-                    </div>
-                    <div>
-                      <p className="text-orange-700">Téléphone</p>
-                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-orange-700">Adresse</p>
-                      <p className="font-medium text-orange-900">{(selectedOrder.customer as any).address}</p>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
-              <div>
-                <h3 className="font-semibold mb-3">Articles commandés</h3>
-                <div className="space-y-3">
+              <Separator />
+
+              {/* Articles commandés */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">Articles commandés</h3>
+                <div className="space-y-1.5">
                   {selectedOrder.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 border border-[hsl(var(--border))] rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium">{item.product.name}</p>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                          Quantité: {item.quantity}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{item.total.toFixed(2)} FCFA</p>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                          {item.price.toFixed(2)} FCFA / unité
-                        </p>
-                      </div>
-                    </div>
+                    <Card key={item.id}>
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.product.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Quantité: {item.quantity} × {item.price.toFixed(2)} FCFA
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary text-sm">{item.total.toFixed(2)} FCFA</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
 
-              <div className="border-t border-[hsl(var(--border))] pt-4">
-                <div className="flex items-center justify-between text-lg">
-                  <span className="font-bold text-base">Total</span>
-                  <span className="text-base font-bold text-[hsl(var(--primary))]">
-                    {selectedOrder.totalAmount.toFixed(2)} FCFA
-                  </span>
-                </div>
-              </div>
+              <Separator />
 
+              {/* Total */}
+              <Card className="bg-muted/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-base">Total</span>
+                    <span className="text-base font-bold text-primary">
+                      {selectedOrder.totalAmount.toFixed(2)} FCFA
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Separator />
+
+              {/* Actions */}
               <div className="space-y-2">
                 <div className="flex gap-2">
                   {selectedOrder.status === "PENDING" && (
                     <Button
                       variant="outline"
+                      size="sm"
                       className="flex-1"
                       onClick={() => handleUpdateStatus(selectedOrder.id, "completed")}
                       disabled={updateStatus.isPending}
                     >
+                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                       Marquer traité
                     </Button>
                   )}
                   {(selectedOrder.status === "PENDING" || selectedOrder.status === "completed") && (
                     <Button
+                      size="sm"
                       className="flex-1"
                       onClick={() => handleUpdateStatus(selectedOrder.id, "PAID")}
                       disabled={updateStatus.isPending}
                     >
+                      <DollarSign className="h-3.5 w-3.5 mr-1.5" />
                       Marquer payé
                     </Button>
                   )}
-                  {(selectedOrder.status === "PENDING" || selectedOrder.status === "CANCELLED") && (
+                  {(selectedOrder.status === "PENDING" || selectedOrder.status === "completed") && (
                     <Button
                       variant="destructive"
+                      size="sm"
                       className="flex-1"
                       onClick={() => confirmDelete(selectedOrder.id)}
                     >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                       Supprimer
                     </Button>
                   )}
@@ -393,11 +453,12 @@ export default function OrdersPage() {
                 {selectedOrder.status === "PAID" && (
                   <Button
                     variant="outline"
+                    size="sm"
                     className="w-full gap-2"
                     onClick={() => handleDownloadInvoice(selectedOrder)}
                     disabled={!establishment}
                   >
-                    <FileText className="h-4 w-4" />
+                    <FileText className="h-3.5 w-3.5" />
                     Télécharger la facture (PDF)
                   </Button>
                 )}

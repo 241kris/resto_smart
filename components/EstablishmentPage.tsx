@@ -463,7 +463,7 @@ export default function EstablishmentPage() {
 
       {/* Share Menu Link Card */}
       {establishment && establishment.slug && (
-        <Card className="bg-[hsl(var(--primary))]/5 border-[hsl(var(--primary))]/20">
+       <Card className="bg-[hsl(var(--muted))]/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[hsl(var(--primary))]">
               <Share2 className="h-5 w-5" />

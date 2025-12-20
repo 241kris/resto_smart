@@ -139,15 +139,47 @@ export async function GET(request: NextRequest) {
       productStats[productId].orderCount = ordersByProduct[productId].size;
     });
 
-    // Convertir en tableau et trier par revenu décroissant
-    const productsArray = Object.values(productStats).sort((a, b) => b.totalRevenue - a.totalRevenue);
+    // Récupérer TOUS les produits de l'établissement
+    const allProducts = await prisma.product.findMany({
+      where: {
+        establishmentId: user.establishment.id,
+      },
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        price: true,
+      },
+      orderBy: {
+        name: 'asc',
+      }
+    });
 
-    // Calculer les totaux
-    const totalQuantity = productsArray.reduce((sum, p) => sum + p.totalQuantity, 0);
-    const totalRevenue = productsArray.reduce((sum, p) => sum + p.totalRevenue, 0);
+    // Fusionner avec les statistiques (ajouter les produits invendus)
+    const allProductsWithStats = allProducts.map(product => {
+      if (productStats[product.id]) {
+        return productStats[product.id];
+      } else {
+        // Produit non vendu sur la période
+        return {
+          productId: product.id,
+          productName: product.name,
+          productImage: product.image,
+          currentPrice: product.price,
+          totalQuantity: 0,
+          totalRevenue: 0,
+          orderCount: 0,
+        };
+      }
+    });
 
-    // Top 10 produits
-    const top10Products = productsArray.slice(0, 10);
+    // Trier par revenu décroissant
+    const sortedProducts = [...allProductsWithStats].sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    // Calculer les totaux (uniquement produits vendus)
+    const soldProducts = sortedProducts.filter(p => p.totalQuantity > 0);
+    const totalQuantity = soldProducts.reduce((sum, p) => sum + p.totalQuantity, 0);
+    const totalRevenue = soldProducts.reduce((sum, p) => sum + p.totalRevenue, 0);
 
     return NextResponse.json({
       success: true,
@@ -155,12 +187,12 @@ export async function GET(request: NextRequest) {
       startDate,
       endDate,
       summary: {
-        totalProducts: productsArray.length,
+        totalProducts: soldProducts.length,
         totalQuantitySold: totalQuantity,
         totalRevenue,
+        totalProductsInCatalog: allProducts.length,
       },
-      products: productsArray,
-      top10: top10Products,
+      products: sortedProducts, // Tous les produits (vendus et invendus) triés par revenu
     });
 
   } catch (error) {

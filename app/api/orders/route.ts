@@ -19,10 +19,10 @@ interface OrderItemInput {
 }
 
 /**
- * GET /api/orders
+ * GET /api/orders?period=today|yesterday|day-before-yesterday
  * Récupère toutes les commandes de l'établissement (authentifié)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth_token');
@@ -51,12 +51,36 @@ export async function GET() {
       );
     }
 
-    // Calculer le début et la fin du jour actuel
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    // Récupérer le paramètre de période
+    const searchParams = request.nextUrl.searchParams;
+    const period = searchParams.get('period') || 'today';
 
-    // Récupérer toutes les commandes de l'établissement du jour
+    // Calculer les dates selon la période
+    const now = new Date();
+    let startOfDay: Date;
+    let endOfDay: Date;
+
+    switch (period) {
+      case 'yesterday':
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+        endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+        break;
+      case 'day-before-yesterday':
+        const dayBeforeYesterday = new Date(now);
+        dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+        startOfDay = new Date(dayBeforeYesterday.getFullYear(), dayBeforeYesterday.getMonth(), dayBeforeYesterday.getDate(), 0, 0, 0, 0);
+        endOfDay = new Date(dayBeforeYesterday.getFullYear(), dayBeforeYesterday.getMonth(), dayBeforeYesterday.getDate(), 23, 59, 59, 999);
+        break;
+      case 'today':
+      default:
+        startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+    }
+
+    // Récupérer toutes les commandes de l'établissement pour la période
     const orders = await prisma.order.findMany({
       where: {
         restaurantId: user.establishment.id,

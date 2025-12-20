@@ -120,12 +120,7 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
                 {typeof restaurant.address === 'string' ? restaurant.address : JSON.stringify(restaurant.address)}
               </span>
             </div>
-            {restaurant.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm md:text-base">{restaurant.email}</span>
-              </div>
-            )}
+           
           </div>
         </div>
       </div>
@@ -192,11 +187,7 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
                   <CardContent className="flex-1 p-3 flex flex-col justify-between">
                     <div>
                       <h3 className="font-semibold text-base mb-2">{product.name}</h3>
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                          {product.description}
-                        </p>
-                      )}
+                      
                     </div>
 
                     <div className="flex flex-col items-start justify-between mt-auto pt-4 border-gray-400 border-t gap-2">

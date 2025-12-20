@@ -129,10 +129,10 @@ export async function PATCH(
 
 /**
  * DELETE /api/orders/[id]
- * Supprime une commande (uniquement si PENDING ou PROCESSED)
+ * Supprime une commande (uniquement si PENDING ou completed, pas PAID ni CANCELLED)
  */
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -179,10 +179,17 @@ export async function DELETE(
       );
     }
 
-    // Vérifier que la commande peut être supprimée
-    if (order.status === 'PAID' || order.status === 'completed') {
+    // Vérifier que la commande peut être supprimée (Admin peut supprimer PENDING et completed, mais pas PAID ni CANCELLED)
+    if (order.status === 'PAID') {
       return NextResponse.json(
-        { error: 'Impossible de supprimer une commande déjà payée ou complétée' },
+        { error: 'Impossible de supprimer une commande payée' },
+        { status: 400 }
+      );
+    }
+
+    if (order.status === 'CANCELLED') {
+      return NextResponse.json(
+        { error: 'Impossible de supprimer une commande annulée. Les commandes annulées doivent être conservées pour l\'historique.' },
         { status: 400 }
       );
     }

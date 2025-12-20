@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TrendingUp, DollarSign, ShoppingCart, BarChart3, Loader2, Package } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -129,33 +130,35 @@ export default function AnalyticsPage() {
 
         {/* Sélection de période */}
         <div className="flex gap-2 items-center">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="7days">7 derniers jours</option>
-            <option value="months">X derniers mois</option>
-          </select>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sélectionner période" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7days">7 derniers jours</SelectItem>
+              <SelectItem value="months">X derniers mois</SelectItem>
+            </SelectContent>
+          </Select>
 
           {period === 'months' && (
-            <select
-              value={monthsCount}
-              onChange={(e) => setMonthsCount(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-                <option key={num} value={num.toString()}>
-                  {num} mois
-                </option>
-              ))}
-            </select>
+            <Select value={monthsCount} onValueChange={setMonthsCount}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Mois" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num} mois
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab('global')}
@@ -253,7 +256,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Graphiques */}
-          <div className="grid gap-4 md:grid-cols ">
+          <div className="grid gap-4 md:grid-cols-2">
             {/* Graphique des revenus */}
             <Card>
               <CardHeader>
@@ -291,7 +294,7 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-           
+
         </>
           )}
         </>
