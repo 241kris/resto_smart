@@ -18,7 +18,7 @@ export interface Order {
   status: 'PENDING' | 'completed' | 'PAID' | 'CANCELLED'
   table?: {
     id: string
-    number: number
+    name: string
     tableToken: string
   } | null
   customer?: {

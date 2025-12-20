@@ -84,7 +84,7 @@ export async function PATCH(
         table: {
           select: {
             id: true,
-            number: true,
+            name: true,
             tableToken: true,
           }
         },

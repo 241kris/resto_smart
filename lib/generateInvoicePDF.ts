@@ -20,7 +20,7 @@ interface InvoiceOrder {
   createdAt: string
   table?: {
     id: string
-    number: number
+    name: string
     tableToken: string
   } | null
   customer?: {

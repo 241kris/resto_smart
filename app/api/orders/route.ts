@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         table: {
           select: {
             id: true,
-            number: true,
+            name: true,
             tableToken: true,
           }
         },
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
         table: {
           select: {
             id: true,
-            number: true,
+            name: true,
             tableToken: true,
           }
         },

@@ -94,7 +94,7 @@ export async function generateInventoryPDF(data: InventoryData, establishmentNam
       5: { halign: 'right', cellWidth: 30 },
       6: { halign: 'center', cellWidth: 25 }
     },
-    didParseCell: (data) => {
+    didParseCell: (data: any) => {
       // Colorer les statuts
       if (data.column.index === 6 && data.section === 'body') {
         if (data.cell.text[0] === 'Vendu') {
