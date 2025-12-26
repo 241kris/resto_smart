@@ -38,12 +38,25 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
       const orders = getOrdersFromLocalStorage()
       setHasOrders(orders.length > 0)
     }
+
+    // Vérifier au chargement
     checkOrders()
-    // Revérifier quand la modal se ferme
-    if (!ordersOpen) {
+
+    // Vérifier quand les modals se ferment
+    if (!ordersOpen && !cartOpen) {
       checkOrders()
     }
-  }, [ordersOpen])
+  }, [ordersOpen, cartOpen])
+
+  // Vérifier périodiquement les commandes (au cas où elles sont ajoutées)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const orders = getOrdersFromLocalStorage()
+      setHasOrders(orders.length > 0)
+    }, 2000) // Vérifier toutes les 2 secondes
+
+    return () => clearInterval(interval)
+  }, [])
 
   const filteredProducts = selectedCategory && data
     ? data.products.filter(product => product.categoryId === selectedCategory)
@@ -169,14 +182,26 @@ function TableMenuContent({ restaurantId, tableToken }: { restaurantId: string; 
             return (
               <Card key={product.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                 <div className="flex flex-col h-full">
-                  <div className="relative w-full h-38">
+                  <div className="relative w-full h-40">
                     {product.image ? (
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                      />
+                      product.image.startsWith('data:') || product.image.startsWith('/') ? (
+                        <Image
+                                              src={product.image || "/default-product.svg"}
+                                              alt={product.name}
+                                              fill
+                                              className="object-cover"
+                                              unoptimized
+                                              referrerPolicy="no-referrer"
+                                            />
+                      ) : (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
                         <ShoppingCart className="h-12 w-12 text-muted-foreground" />

@@ -168,12 +168,23 @@ export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName
                   {/* Image */}
                   <div className="relative w-15 h-15 flex-shrink-0 rounded-md overflow-hidden bg-muted">
                     {item.image ? (
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                      item.image.startsWith('data:') || item.image.startsWith('/') ? (
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingCart className="h-8 w-8 text-muted-foreground" />

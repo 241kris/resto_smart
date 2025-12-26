@@ -28,7 +28,7 @@ const modak = Modak({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${modak.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${modak.variable} antialiased`} suppressHydrationWarning>
         <Providers>
           <ThemeProvider
             attribute="class"

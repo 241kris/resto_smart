@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import ProductFormModal from "@/components/ProductFormModal"
+import { ProductForm } from "@/components/ProductForm"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import {
   useProducts,
@@ -24,7 +24,7 @@ export default function ProductsPage() {
   const deleteMutation = useDeleteProduct()
 
   const [searchTerm, setSearchTerm] = useState("")
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'form'>('list')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
 
@@ -38,7 +38,8 @@ export default function ProductsPage() {
   // Créer un produit
   const handleCreateProduct = async (formData: any) => {
     await createMutation.mutateAsync(formData)
-    setIsFormOpen(false)
+    setViewMode('list')
+    setEditingProduct(null)
   }
 
   // Modifier un produit
@@ -48,6 +49,7 @@ export default function ProductsPage() {
       id: editingProduct.id,
       data: formData
     })
+    setViewMode('list')
     setEditingProduct(null)
   }
 
@@ -58,16 +60,49 @@ export default function ProductsPage() {
     setDeletingProduct(null)
   }
 
-  // Ouvrir la modal de création
+  // Ouvrir le formulaire de création
   const handleOpenCreate = () => {
     setEditingProduct(null)
-    setIsFormOpen(true)
+    setViewMode('form')
   }
 
-  // Ouvrir la modal de modification
+  // Ouvrir le formulaire de modification
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product)
-    setIsFormOpen(true)
+    setViewMode('form')
+  }
+
+  // Retour à la liste
+  const handleBackToList = () => {
+    setViewMode('list')
+    setEditingProduct(null)
+  }
+
+  // Afficher le formulaire si en mode form
+  if (viewMode === 'form') {
+    return (
+      <>
+        <ProductForm
+          product={editingProduct}
+          onBack={handleBackToList}
+          onSubmit={editingProduct ? handleUpdateProduct : handleCreateProduct}
+          isLoading={editingProduct ? updateMutation.isPending : createMutation.isPending}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          open={!!deletingProduct}
+          onOpenChange={(open) => !open && setDeletingProduct(null)}
+          title="Supprimer le produit"
+          description={`Êtes-vous sûr de vouloir supprimer "${deletingProduct?.name}" ? Cette action ne peut pas être annulée.`}
+          onConfirm={handleDeleteProduct}
+          isLoading={deleteMutation.isPending}
+          confirmText="Supprimer"
+          cancelText="Annuler"
+          variant="destructive"
+        />
+      </>
+    )
   }
 
   // Affichage du loader
@@ -165,6 +200,8 @@ export default function ProductsPage() {
                   alt={product.name}
                   fill
                   className="object-cover"
+                  unoptimized
+                  referrerPolicy="no-referrer"
                 />
               </div>
               <CardHeader>
@@ -211,18 +248,6 @@ export default function ProductsPage() {
           ))}
         </div>
       )}
-
-      {/* Product Form Modal */}
-      <ProductFormModal
-        open={isFormOpen}
-        onOpenChange={(open) => {
-          setIsFormOpen(open)
-          if (!open) setEditingProduct(null)
-        }}
-        product={editingProduct}
-        onSubmit={editingProduct ? handleUpdateProduct : handleCreateProduct}
-        isLoading={editingProduct ? updateMutation.isPending : createMutation.isPending}
-      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

@@ -45,7 +45,7 @@ export default function AuthPage() {
           return
         }
         if (formData.password !== formData.confirmPassword) {
-          setError("Les mots de passe ne correspondent pas")
+          setError("Les mots de passe ne correspondent pas desole")
           setIsLoading(false)
           return
         }

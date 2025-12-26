@@ -171,6 +171,7 @@ export default function TablesPage() {
         <CreateTablesModal
           restaurantId={establishment.id}
           existingTableCount={tables.length}
+          existingTableNames={tables.map(t => t.name)}
         />
       </div>
 

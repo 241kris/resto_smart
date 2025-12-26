@@ -28,12 +28,23 @@ export function ImageThumbnails({ images, selectedIndex, onSelect }: ImageThumbn
                     : "opacity-70 hover:opacity-100 hover:scale-105 shadow-md"
                 }`}
               >
-                <Image
-                  src={image}
-                  alt={`Image ${index + 1}`}
-                  fill
-                  className="object-cover"
-                />
+                {image.startsWith('data:') || image.startsWith('/') ? (
+                  <Image
+                    src={image}
+                    alt={`Image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <img
+                    src={image}
+                    alt={`Image ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                  />
+                )}
                 {index === selectedIndex && (
                   <div className="absolute inset-0 bg-primary/20 pointer-events-none" />
                 )}

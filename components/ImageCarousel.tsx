@@ -68,13 +68,24 @@ export function ImageCarousel({ images, alt, className = "", onIndexChange, exte
       <div className={`relative h-64 md:h-80 w-full ${className}`}>
         <div className="absolute inset-0 bg-black/60 z-10" />
         {images.length === 1 ? (
-          <Image
-            src={images[0]}
-            alt={alt}
-            fill
-            className="object-cover"
-            priority
-          />
+          images[0].startsWith('data:') || images[0].startsWith('/') ? (
+            <Image
+              src={images[0]}
+              alt={alt}
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          ) : (
+            <img
+              src={images[0]}
+              alt={alt}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+            />
+          )
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/50" />
         )}
@@ -92,13 +103,24 @@ export function ImageCarousel({ images, alt, className = "", onIndexChange, exte
         <div className="flex h-full touch-pan-y">
           {images.map((image, index) => (
             <div key={index} className="flex-[0_0_100%] min-w-0 relative h-full">
-              <Image
-                src={image}
-                alt={`${alt} - Image ${index + 1}`}
-                fill
-                className="object-cover"
-                priority={index === 0}
-              />
+              {image.startsWith('data:') || image.startsWith('/') ? (
+                <Image
+                  src={image}
+                  alt={`${alt} - Image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                  unoptimized
+                />
+              ) : (
+                <img
+                  src={image}
+                  alt={`${alt} - Image ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                />
+              )}
             </div>
           ))}
         </div>

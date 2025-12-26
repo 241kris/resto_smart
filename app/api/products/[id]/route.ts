@@ -79,24 +79,37 @@ export async function PUT(
 
     // Validation de l'image si présente
     if (image && image !== existingProduct.image) {
-      const imageRegex = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/
-      if (!imageRegex.test(image)) {
+      const isBase64 = image.startsWith('data:')
+      const isUrl = image.startsWith('http://') || image.startsWith('https://')
+
+      if (!isBase64 && !isUrl) {
         return NextResponse.json(
-          { error: 'Format d\'image invalide. Formats acceptés: JPEG, JPG, PNG, GIF, WEBP' },
+          { error: 'Format d\'image invalide. Veuillez fournir une URL valide ou un fichier image.' },
           { status: 400 }
         )
       }
 
-      // Vérifier la taille (max 3MB)
-      const base64Length = image.split(',')[1]?.length || 0
-      const sizeInBytes = (base64Length * 3) / 4
-      const sizeInMB = sizeInBytes / (1024 * 1024)
+      // Valider le format base64
+      if (isBase64) {
+        const imageRegex = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/
+        if (!imageRegex.test(image)) {
+          return NextResponse.json(
+            { error: 'Format d\'image invalide. Formats acceptés: JPEG, JPG, PNG, GIF, WEBP' },
+            { status: 400 }
+          )
+        }
 
-      if (sizeInMB > 3) {
-        return NextResponse.json(
-          { error: 'L\'image ne doit pas dépasser 3 Mo' },
-          { status: 400 }
-        )
+        // Vérifier la taille (max 3MB)
+        const base64Length = image.split(',')[1]?.length || 0
+        const sizeInBytes = (base64Length * 3) / 4
+        const sizeInMB = sizeInBytes / (1024 * 1024)
+
+        if (sizeInMB > 3) {
+          return NextResponse.json(
+            { error: 'L\'image ne doit pas dépasser 3 Mo' },
+            { status: 400 }
+          )
+        }
       }
     }
 
@@ -118,35 +131,47 @@ export async function PUT(
       }
     }
 
-    // Upload de l'image sur Supabase si une nouvelle image est fournie
+    // Traitement de l'image si une nouvelle image est fournie
     let imageUrl = existingProduct.image
 
     if (image && image !== existingProduct.image) {
-      try {
-        // Compresser l'image avant l'upload
-        const compressedImage = await compressImage(image, 40) // 40% de qualité pour ~60% de réduction
+      const isBase64 = image.startsWith('data:')
+      const isUrl = image.startsWith('http://') || image.startsWith('https://')
 
-        const fileName = `product-${nanoid(16)}.webp`
-        imageUrl = await uploadImageToSupabase(compressedImage, 'products', fileName)
+      if (isUrl) {
+        // Si c'est une URL, l'utiliser directement
+        imageUrl = image
 
-        // Supprimer l'ancienne image si elle existe
-        if (existingProduct.image) {
+        // Supprimer l'ancienne image de Supabase si c'était un upload et non une URL
+        if (existingProduct.image && !existingProduct.image.startsWith('http')) {
           try {
-            const oldFileName = existingProduct.image.split('/').pop()
-            if (oldFileName) {
-              await deleteImageFromSupabase('products', oldFileName)
-            }
+            await deleteImageFromSupabase('products', existingProduct.image)
           } catch (deleteError) {
             console.error('Erreur suppression ancienne image:', deleteError)
-            // Continue même si la suppression échoue
           }
         }
-      } catch (uploadError) {
-        console.error('Erreur upload image:', uploadError)
-        return NextResponse.json(
-          { error: 'Erreur lors de l\'upload de l\'image' },
-          { status: 500 }
-        )
+      } else if (isBase64) {
+        // Si c'est un fichier base64, compresser et uploader sur Supabase
+        try {
+          const compressedImage = await compressImage(image, 40)
+          const fileName = `product-${nanoid(16)}.webp`
+          imageUrl = await uploadImageToSupabase(compressedImage, 'products', fileName)
+
+          // Supprimer l'ancienne image de Supabase si elle existe et n'est pas une URL
+          if (existingProduct.image && !existingProduct.image.startsWith('http')) {
+            try {
+              await deleteImageFromSupabase('products', existingProduct.image)
+            } catch (deleteError) {
+              console.error('Erreur suppression ancienne image:', deleteError)
+            }
+          }
+        } catch (uploadError) {
+          console.error('Erreur upload image:', uploadError)
+          return NextResponse.json(
+            { error: 'Erreur lors de l\'upload de l\'image' },
+            { status: 500 }
+          )
+        }
       }
     }
 
@@ -188,7 +213,7 @@ export async function PUT(
 
 // DELETE - Supprimer un produit
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -236,13 +261,10 @@ export async function DELETE(
       )
     }
 
-    // Supprimer l'image de Supabase si elle existe
-    if (existingProduct.image) {
+    // Supprimer l'image de Supabase si elle existe et n'est pas une URL externe
+    if (existingProduct.image && !existingProduct.image.startsWith('http')) {
       try {
-        const fileName = existingProduct.image.split('/').pop()
-        if (fileName) {
-          await deleteImageFromSupabase('products', fileName)
-        }
+        await deleteImageFromSupabase('products', existingProduct.image)
       } catch (deleteError) {
         console.error('Erreur suppression image:', deleteError)
         // Continue même si la suppression échoue

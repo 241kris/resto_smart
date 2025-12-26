@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Pencil, Trash2, FolderOpen, AlertCircle } from "lucide-react"
+import { Plus, Pencil, Trash2, FolderOpen, AlertCircle, MoreVertical } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import { CategoryCard } from "./CategoryCard"
 import {
   useCategories,
   useCreateCategory,
@@ -123,33 +131,34 @@ export default function CategoriesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Catégories</h1>
-          <p className="text-[hsl(var(--muted-foreground))]">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Catégories</h1>
+          <p className="text-muted-foreground text-sm">
             Organisez vos produits par catégorie
           </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Stats & Add Category - Responsive */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Stats */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Catégories</CardTitle>
-            <FolderOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold">{categories.length}</div>
+            <div className="text-2xl font-bold">{categories.length}</div>
           </CardContent>
         </Card>
 
         {/* Add Category Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Ajouter une catégorie</CardTitle>
+            <CardTitle className="text-base">Ajouter une catégorie</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   placeholder="Nom de la catégorie"
                   className="flex-1"
@@ -166,7 +175,7 @@ export default function CategoriesPage() {
                   disabled={createMutation.isPending}
                 />
                 <Button
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
                   onClick={handleCreateCategory}
                   disabled={createMutation.isPending || !newCategoryName.trim()}
                 >
@@ -176,7 +185,7 @@ export default function CategoriesPage() {
               </div>
               {(createError || createMutation.isError) && (
                 <div className="flex items-center gap-2 text-destructive text-sm">
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   <p>{createError || (createMutation.error as Error)?.message}</p>
                 </div>
               )}
@@ -185,81 +194,105 @@ export default function CategoriesPage() {
         </Card>
       </div>
 
-      {/* Categories Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des catégories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <div className="py-12 text-center">
-              <FolderOpen className="h-12 w-12 mx-auto text-[hsl(var(--muted-foreground))] mb-4" />
-              <p className="text-[hsl(var(--muted-foreground))]">
-                Aucune catégorie pour le moment
-              </p>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">
-                Créez votre première catégorie ci-dessus
-              </p>
+      {/* Categories List */}
+      {categories.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              Aucune catégorie pour le moment
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Créez votre première catégorie ci-dessus
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Cards sur mobile/tablette */}
+          <div className="lg:hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {categories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  category={category}
+                  onEdit={handleEditClick}
+                  onDelete={setDeletingCategory}
+                  isLoading={updateMutation.isPending || deleteMutation.isPending}
+                />
+              ))}
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Nombre de produits</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary))]/10 flex items-center justify-center">
-                          <FolderOpen className="h-5 w-5 text-[hsl(var(--primary))]" />
-                        </div>
-                        <span className="font-medium">{category.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-[hsl(var(--muted-foreground))]">
-                        {category._count.products} produit{category._count.products !== 1 ? 's' : ''}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditClick(category)}
-                          disabled={updateMutation.isPending || deleteMutation.isPending}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Modifier
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setDeletingCategory(category)}
-                          disabled={updateMutation.isPending || deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Supprimer
-                        </Button>
-                      </div>
-                    </TableCell>
+          </div>
+
+          {/* Tableau sur desktop */}
+          <Card className="hidden lg:block">
+            <CardHeader>
+              <CardTitle>Liste des catégories</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Nombre de produits</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FolderOpen className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="font-medium">{category.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">
+                          {category._count.products} produit{category._count.products !== 1 ? 's' : ''}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditClick(category)}
+                              disabled={updateMutation.isPending || deleteMutation.isPending}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setDeletingCategory(category)}
+                              disabled={updateMutation.isPending || deleteMutation.isPending}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Modifier la catégorie</DialogTitle>
             <DialogDescription>
@@ -289,7 +322,7 @@ export default function CategoriesPage() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setEditingCategory(null)}

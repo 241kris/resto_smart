@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useEstablishment, useCreateOrUpdateEstablishment, type EstablishmentFormData } from "@/lib/hooks/useEstablishment"
 import { useAuth } from "@/lib/AuthContext"
+import { AddImageModal } from "@/components/AddImageModal"
 import Image from "next/image"
 
 export default function EstablishmentPage() {
@@ -28,6 +29,7 @@ export default function EstablishmentPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [imageError, setImageError] = useState<string>("")
   const [copied, setCopied] = useState(false)
+  const [imageModalOpen, setImageModalOpen] = useState(false)
 
   // Initialiser le formulaire avec les données de l'établissement
   useEffect(() => {
@@ -74,39 +76,17 @@ export default function EstablishmentPage() {
     }
   }
 
-  // Gestion des images
-  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  // Gestion des images via modal
+  const handleAddImage = (image: string) => {
     setImageError("")
 
-    if (files.length + formData.images.length > 7) {
+    if (formData.images.length >= 7) {
       setImageError("Vous pouvez ajouter un maximum de 7 images")
       return
     }
 
-    files.forEach(file => {
-      // Vérifier le type
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-      if (!validTypes.includes(file.type)) {
-        setImageError("Format d'image invalide. Formats acceptés: JPEG, JPG, PNG, GIF, WEBP")
-        return
-      }
-
-      // Vérifier la taille (max 3MB)
-      const maxSize = 3 * 1024 * 1024
-      if (file.size > maxSize) {
-        setImageError("Chaque image ne doit pas dépasser 3 Mo")
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const result = reader.result as string
-        setImagePreviews(prev => [...prev, result])
-        setFormData(prev => ({ ...prev, images: [...prev.images, result] }))
-      }
-      reader.readAsDataURL(file)
-    })
+    setImagePreviews(prev => [...prev, image])
+    setFormData(prev => ({ ...prev, images: [...prev.images, image] }))
   }
 
   const removeImage = (index: number) => {
@@ -246,12 +226,23 @@ export default function EstablishmentPage() {
               {imagePreviews.map((preview, index) => (
                 <div key={index} className="relative group">
                   <div className="relative h-40 w-full rounded-lg overflow-hidden bg-[hsl(var(--muted))]">
-                    <Image
-                      src={preview}
-                      alt={`Image ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
+                    {preview.startsWith('data:') || preview.startsWith('/') ? (
+                      <Image
+                        src={preview}
+                        alt={`Image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <img
+                        src={preview}
+                        alt={`Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                      />
+                    )}
                     {isEditing && (
                       <button
                         onClick={() => removeImage(index)}
@@ -271,19 +262,16 @@ export default function EstablishmentPage() {
 
               {/* Bouton d'ajout d'images */}
               {isEditing && imagePreviews.length < 7 && (
-                <label className="relative h-40 w-full rounded-lg border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors cursor-pointer flex items-center justify-center">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                    onChange={handleImagesChange}
-                    className="hidden"
-                    multiple
-                  />
+                <button
+                  type="button"
+                  onClick={() => setImageModalOpen(true)}
+                  className="relative h-40 w-full rounded-lg border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors cursor-pointer flex items-center justify-center"
+                >
                   <div className="text-center">
                     <Plus className="h-8 w-8 mx-auto mb-2 text-[hsl(var(--muted-foreground))]" />
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">Ajouter des images</p>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">Ajouter une image</p>
                   </div>
-                </label>
+                </button>
               )}
             </div>
 
@@ -519,6 +507,15 @@ export default function EstablishmentPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* AddImageModal */}
+      <AddImageModal
+        open={imageModalOpen}
+        onOpenChange={setImageModalOpen}
+        onAdd={handleAddImage}
+        currentCount={imagePreviews.length}
+        maxImages={7}
+      />
     </div>
   )
 }

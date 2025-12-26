@@ -122,16 +122,16 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Statistiques de ventes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Statistiques de ventes</h1>
+          <p className="text-sm text-muted-foreground">
             Analysez vos performances de ventes (factures payées uniquement)
           </p>
         </div>
 
-        {/* Sélection de période */}
-        <div className="flex gap-2 items-center">
+        {/* Sélection de période - Responsive */}
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Sélectionner période" />
             </SelectTrigger>
             <SelectContent>
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
 
           {period === 'months' && (
             <Select value={monthsCount} onValueChange={setMonthsCount}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Mois" />
               </SelectTrigger>
               <SelectContent>
@@ -157,33 +157,33 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-border">
-        <div className="flex gap-4">
+      {/* Tabs - Responsive */}
+      <div className="border-b border-border -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="flex gap-2 sm:gap-4">
           <button
             onClick={() => setActiveTab('global')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === 'global'
                 ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
               <BarChart3 className="h-4 w-4" />
-              Vue Globale
+              <span className="text-sm sm:text-base">Vue Globale</span>
             </div>
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === 'products'
                 ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
               <Package className="h-4 w-4" />
-              Par Produit
+              <span className="text-sm sm:text-base">Par Produit</span>
             </div>
           </button>
         </div>
@@ -207,69 +207,73 @@ export default function AnalyticsPage() {
             </Card>
           ) : data && (
         <>
-          {/* Statistiques globales */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Revenu Total</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-green-600">
-                  {data.summary.totalRevenue.toFixed(2)} FCFA
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {period === '7days' ? '7 derniers jours' : `${monthsCount} derniers mois`}
-                </p>
-              </CardContent>
-            </Card>
+          {/* Statistiques globales - Scrollable sur mobile */}
+          <div className="relative -mx-4 sm:mx-0">
+            <div className="overflow-x-auto px-4 sm:px-0 pb-2 sm:pb-0">
+              <div className="flex sm:grid sm:grid-cols-3 gap-4 min-w-max sm:min-w-0">
+                <Card className="min-w-[200px] sm:min-w-0">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Revenu Total</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {data.summary.totalRevenue.toFixed(2)} FCFA
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {period === '7days' ? '7 derniers jours' : `${monthsCount} derniers mois`}
+                    </p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Commandes Payées</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-blue-600">
-                  {data.summary.totalOrders}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Factures avec statut PAID
-                </p>
-              </CardContent>
-            </Card>
+                <Card className="min-w-[200px] sm:min-w-0">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Commandes Payées</CardTitle>
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {data.summary.totalOrders}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Factures avec statut PAID
+                    </p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Panier Moyen</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-orange-600">
-                  {data.summary.averageOrderValue.toFixed(2)} FCFA
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Moyenne par commande
-                </p>
-              </CardContent>
-            </Card>
+                <Card className="min-w-[200px] sm:min-w-0">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Panier Moyen</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {data.summary.averageOrderValue.toFixed(2)} FCFA
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Moyenne par commande
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
 
-          {/* Graphiques */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Graphiques - Responsive */}
+          <div className="grid gap-4 lg:grid-cols-2">
             {/* Graphique des revenus */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
                   Évolution des Revenus
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Revenus générés par les commandes payées
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[250px] sm:h-[300px]">
                   <Line data={revenueChartData} options={chartOptions} />
                 </div>
               </CardContent>
@@ -278,16 +282,16 @@ export default function AnalyticsPage() {
             {/* Graphique des commandes */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                   Nombre de Commandes
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Volume de commandes payées sur la période
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[250px] sm:h-[300px]">
                   <Bar data={ordersChartData} options={chartOptions} />
                 </div>
               </CardContent>

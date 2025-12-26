@@ -1,14 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AlertCircle, Upload, X, Link2, FileImage } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ArrowLeft, AlertCircle, Upload, X, Link2, FileImage } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,21 +19,19 @@ import { useCategories } from "@/lib/hooks/useCategories"
 import type { Product, ProductFormData } from "@/lib/hooks/useProducts"
 import Image from "next/image"
 
-interface ProductFormModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface ProductFormProps {
   product?: Product | null
+  onBack: () => void
   onSubmit: (data: ProductFormData) => Promise<void>
   isLoading: boolean
 }
 
-export default function ProductFormModal({
-  open,
-  onOpenChange,
+export function ProductForm({
   product,
+  onBack,
   onSubmit,
   isLoading
-}: ProductFormModalProps) {
+}: ProductFormProps) {
   const { data: categoriesData } = useCategories()
   const categories = categoriesData?.categories || []
 
@@ -60,13 +52,13 @@ export default function ProductFormModal({
   useEffect(() => {
     if (product) {
       setFormData({
-        name: product.name,
-        description: product.description || "",
-        price: product.price,
-        categoryId: product.categoryId || "NONE",
-        image: product.image || ""
+        name: product.name ?? "",
+        description: product.description ?? "",
+        price: product.price ?? 0,
+        categoryId: product.categoryId ?? "NONE",
+        image: product.image ?? ""
       })
-      setImagePreview(product.image || "")
+      setImagePreview(product.image ?? "")
       // Détecter si c'est une URL ou un fichier base64
       if (product.image && !product.image.startsWith('data:')) {
         setImageMode("url")
@@ -89,7 +81,7 @@ export default function ProductFormModal({
     }
     setImageError("")
     setFormError("")
-  }, [product, open])
+  }, [product])
 
   const handleInputChange = (field: keyof ProductFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -135,7 +127,7 @@ export default function ProductFormModal({
     setImageUrl(url)
     setImageError("")
 
-    // Vérifier si l'URL semble valide (commence par http:// ou https://)
+    // Vérifier si l'URL semble valide
     if (url.trim() && !url.startsWith('http://') && !url.startsWith('https://')) {
       setImageError("L'URL doit commencer par http:// ou https://")
       setImagePreview("")
@@ -184,28 +176,43 @@ export default function ProductFormModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{product ? "Modifier le produit" : "Nouveau produit"}</DialogTitle>
-          <DialogDescription>
-            {product ? "Modifiez les informations du produit" : "Ajoutez un nouveau produit à votre menu"}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-4 pb-6">
+      {/* Header avec retour */}
+      <div className="flex items-center justify-between gap-4 sticky top-0 bg-background z-10 py-4 border-b">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="flex-shrink-0"
+            disabled={isLoading}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl md:text-2xl font-bold truncate">
+              {product ? "Modifier le produit" : "Nouveau produit"}
+            </h1>
+          </div>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Erreur globale */}
-          {formError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{formError}</AlertDescription>
-            </Alert>
-          )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Erreur globale */}
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
 
-          {/* Image */}
-          <div className="space-y-3">
-            <Label>Image du produit (optionnelle)</Label>
-
+        {/* Image */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Image du produit (optionnelle)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {/* Mode selector */}
             <div className="flex gap-2 border-b">
               <button
@@ -236,16 +243,27 @@ export default function ProductFormModal({
               </button>
             </div>
 
-            <div className="flex gap-4 items-start">
-              <div className="relative w-32 h-32 rounded-lg overflow-hidden bg-[hsl(var(--muted))] flex-shrink-0">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="relative w-full sm:w-32 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                 {imagePreview ? (
                   <>
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      fill
-                      className="object-cover"
-                    />
+                    {imagePreview.startsWith('data:') || imagePreview.startsWith('/') ? (
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={handleRemoveImage}
@@ -256,12 +274,12 @@ export default function ProductFormModal({
                   </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <Upload className="h-8 w-8 text-[hsl(var(--muted-foreground))]" />
+                    <Upload className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
               </div>
 
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 w-full space-y-2">
                 {imageMode === "file" ? (
                   <>
                     <Input
@@ -272,7 +290,7 @@ export default function ProductFormModal({
                       className="cursor-pointer"
                       disabled={isLoading}
                     />
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                    <p className="text-sm text-muted-foreground">
                       JPEG, JPG, PNG, GIF, WEBP - Max: 3 Mo
                     </p>
                   </>
@@ -286,7 +304,7 @@ export default function ProductFormModal({
                       onChange={(e) => handleImageUrlChange(e.target.value)}
                       disabled={isLoading}
                     />
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                    <p className="text-sm text-muted-foreground">
                       Entrez l'URL complète de l'image (doit commencer par http:// ou https://)
                     </p>
                   </>
@@ -300,45 +318,51 @@ export default function ProductFormModal({
                 )}
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Nom et Catégorie */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nom du produit *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="Ex: Pizza Margherita"
-                required
-                disabled={isLoading}
-              />
+        {/* Informations de base */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Informations de base</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Nom et Catégorie */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nom du produit *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder="Ex: Pizza Margherita"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Catégorie</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => handleInputChange("categoryId", value)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Sans catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Sans catégorie</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Catégorie</Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => handleInputChange("categoryId", value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Sans catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">Sans catégorie</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          {/* Prix et (espace vide pour alignement) */}
-          <div className="grid grid-cols-2 gap-4">
+            {/* Prix */}
             <div className="space-y-2">
               <Label htmlFor="price">Prix (FCFA) *</Label>
               <Input
@@ -353,43 +377,46 @@ export default function ProductFormModal({
                 disabled={isLoading}
               />
             </div>
-            <div></div>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              placeholder="Décrivez votre produit..."
-              rows={3}
-              disabled={isLoading}
-            />
-          </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                placeholder="Décrivez votre produit..."
+                rows={4}
+                disabled={isLoading}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Boutons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={isLoading || !formData.name.trim() || formData.price < 0}
-            >
-              {isLoading ? "Enregistrement..." : product ? "Modifier" : "Créer"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Annuler
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {/* Boutons d'action */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                type="submit"
+                className="flex-1 order-1 sm:order-2"
+                disabled={isLoading || !formData.name.trim() || formData.price < 0}
+              >
+                {isLoading ? "Enregistrement..." : product ? "Modifier" : "Créer"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 order-2 sm:order-1"
+                onClick={onBack}
+                disabled={isLoading}
+              >
+                Annuler
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
   )
 }

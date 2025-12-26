@@ -37,12 +37,25 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
       const orders = getOrdersFromLocalStorage()
       setHasOrders(orders.length > 0)
     }
+
+    // Vérifier au chargement
     checkOrders()
-    // Revérifier quand la modal se ferme
-    if (!ordersOpen) {
+
+    // Vérifier quand les modals se ferment
+    if (!ordersOpen && !cartOpen) {
       checkOrders()
     }
-  }, [ordersOpen])
+  }, [ordersOpen, cartOpen])
+
+  // Vérifier périodiquement les commandes (au cas où elles sont ajoutées)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const orders = getOrdersFromLocalStorage()
+      setHasOrders(orders.length > 0)
+    }, 2000) // Vérifier toutes les 2 secondes
+
+    return () => clearInterval(interval)
+  }, [])
 
   const filteredProducts = selectedCategory && data
     ? data.products.filter(product => product.categoryId === selectedCategory)
@@ -119,7 +132,7 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
                 {typeof restaurant.address === 'string' ? restaurant.address : JSON.stringify(restaurant.address)}
               </span>
             </div>
-           
+
           </div>
         </div>
       </div>
@@ -168,14 +181,27 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
             return (
               <Card key={product.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                 <div className="flex flex-col h-full">
-                  <div className="relative w-full h-38">
+                  <div className="relative w-full h-40">
                     {product.image ? (
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                      />
+                      product.image.startsWith('data:') || product.image.startsWith('/') ? (
+                        <Image
+                          src={product.image || "/default-product.svg"}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                          referrerPolicy="no-referrer"
+                        />
+
+                      ) : (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
                         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
@@ -186,7 +212,7 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
                   <CardContent className="flex-1 p-3 flex flex-col justify-between">
                     <div>
                       <h3 className="font-semibold text-base mb-2">{product.name}</h3>
-                       
+
                     </div>
 
                     <div className="flex flex-col items-start justify-between mt-auto pt-4 border-gray-400 border-t gap-2">
