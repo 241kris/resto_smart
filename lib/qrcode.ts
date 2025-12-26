@@ -1,53 +1,44 @@
 import QRCode from 'qrcode';
 import sharp from 'sharp';
+import { createCanvas, registerFont } from 'canvas';
+import path from 'path';
 
 export async function generateQRCode(url: string, tableIdentifier: number | string): Promise<string> {
-  try {
-    const width = 400;
-    const identifier = String(tableIdentifier);
+  const width = 400;
+  const identifier = String(tableIdentifier);
 
-    // 1. Générer le QR Code
-    const qrBuffer = await QRCode.toBuffer(url, {
-      width,
-      margin: 2,
-      errorCorrectionLevel: 'H',
-      color: { dark: '#000000', light: '#FFFFFF' }
-    });
+  // 1. QR code
+  const qrBuffer = await QRCode.toBuffer(url, {
+    width,
+    margin: 2,
+    errorCorrectionLevel: 'H',
+    color: { dark: '#000000', light: '#FFFFFF' }
+  });
 
-    // 2. Déterminer la taille du texte
-    let fontSize = 36;
-    let overlaySize = 120;
-    if (identifier.length > 4) { fontSize = 28; overlaySize = 110; }
-    if (identifier.length > 6) { fontSize = 24; overlaySize = 100; }
-    if (identifier.length > 8) { fontSize = 20; overlaySize = 90; }
+  // 2. Créer canvas pour le texte
+  const overlaySize = 120;
+  const canvas = createCanvas(overlaySize, overlaySize);
+  const ctx = canvas.getContext('2d');
 
-    // 3. SVG simple avec police sans-serif sûre
-    const textOverlay = Buffer.from(`
-<svg width="${overlaySize}" height="${overlaySize}" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="${overlaySize/2}" cy="${overlaySize/2}" r="${overlaySize/2 - 4}" fill="#ffffff"/>
-  <text
-    x="${overlaySize/2}"
-    y="${overlaySize/2}"
-    text-anchor="middle"
-    dominant-baseline="middle"
-    font-family="sans-serif"
-    font-size="${fontSize}"
-    font-weight="bold"
-    fill="#F97316"
-  >${identifier}</text>
-</svg>
-`);
+  // 3. Fond blanc circulaire
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(overlaySize/2, overlaySize/2, overlaySize/2 - 4, 0, Math.PI*2);
+  ctx.fill();
 
-    // 4. Fusionner QR et overlay
-    const finalImageBuffer = await sharp(qrBuffer)
-      .composite([{ input: textOverlay, gravity: 'center' }])
-      .png()
-      .toBuffer();
+  // 4. Texte
+  ctx.fillStyle = '#F97316';
+  ctx.font = `bold 36px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(identifier, overlaySize/2, overlaySize/2);
 
-    return `data:image/png;base64,${finalImageBuffer.toString('base64')}`;
+  // 5. Fusion avec Sharp
+  const textBuffer = canvas.toBuffer();
+  const finalBuffer = await sharp(qrBuffer)
+    .composite([{ input: textBuffer, gravity: 'center' }])
+    .png()
+    .toBuffer();
 
-  } catch (error) {
-    console.error('Erreur génération QR:', error);
-    throw new Error('Impossible de générer le QR Code');
-  }
+  return `data:image/png;base64,${finalBuffer.toString('base64')}`;
 }
