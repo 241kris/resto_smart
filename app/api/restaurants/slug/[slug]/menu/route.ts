@@ -56,10 +56,11 @@ export async function GET(
       }
     });
 
-    // 3. Récupérer tous les produits du restaurant avec leurs catégories
+    // 3. Récupérer tous les produits actifs du restaurant avec leurs catégories
     const products = await prisma.product.findMany({
       where: {
         establishmentId: restaurant.id,
+        status: true // Uniquement les produits disponibles
       },
       include: {
         category: {

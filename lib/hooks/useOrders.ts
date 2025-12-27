@@ -114,3 +114,38 @@ export function useDeleteOrder() {
     },
   })
 }
+
+// Hook pour créer une commande manuelle depuis l'admin
+export function useCreateManualOrder() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: {
+      items: Array<{
+        productId: string
+        quantity: number
+        price: number
+      }>
+      tableId?: string
+      status: 'completed' | 'PAID'
+    }) => {
+      const response = await fetch('/api/orders/manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création de la commande')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+}

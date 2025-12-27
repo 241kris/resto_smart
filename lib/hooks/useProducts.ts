@@ -9,6 +9,7 @@ export interface Product {
   categoryId: string | null
   establishmentId: string
   createdAt: string
+  status: boolean
   category: {
     id: string
     name: string
@@ -104,6 +105,33 @@ export function useDeleteProduct() {
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+}
+
+// Hook pour activer/désactiver un produit
+export function useUpdateProductStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: boolean }) => {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la mise à jour du statut')
       }
 
       return response.json()

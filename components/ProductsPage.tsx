@@ -1,32 +1,42 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Pencil, Trash2, Search, AlertCircle } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, AlertCircle, ShoppingCart, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { ProductForm } from "@/components/ProductForm"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import ManualOrderCart from "@/components/ManualOrderCart"
+import { ManualOrderCartProvider, useManualOrderCart } from "@/contexts/ManualOrderCartContext"
 import {
   useProducts,
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
+  useUpdateProductStatus,
   type Product
 } from "@/lib/hooks/useProducts"
+import { useEstablishment } from "@/lib/hooks/useEstablishment"
 import Image from "next/image"
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const { data, isLoading, error } = useProducts()
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
   const deleteMutation = useDeleteProduct()
+  const updateStatusMutation = useUpdateProductStatus()
+  const { data: establishmentData } = useEstablishment()
+  const { addToCart, removeFromCart, isInCart, totalItems } = useManualOrderCart()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [cartOpen, setCartOpen] = useState(false)
 
   const products = data?.products || []
 
@@ -205,13 +215,20 @@ export default function ProductsPage() {
                 />
               </div>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg">{product.name}</CardTitle>
                     <CardDescription className="mt-1 line-clamp-2">
                       {product.description || "Aucune description"}
                     </CardDescription>
                   </div>
+                  {/* Badge de disponibilité */}
+                  <Badge
+                    variant={product.status ? "default" : "secondary"}
+                    className={product.status ? "bg-green-100 text-green-700 hover:bg-green-100 shrink-0" : "bg-gray-100 text-gray-600 shrink-0"}
+                  >
+                    {product.status ? "Disponible" : "Indisponible"}
+                  </Badge>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   {product.category && (
@@ -223,25 +240,61 @@ export default function ProductsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenEdit(product)}
-                    disabled={updateMutation.isPending || deleteMutation.isPending}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Modifier
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setDeletingProduct(product)}
-                    disabled={updateMutation.isPending || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex flex-col gap-3">
+                  {/* Switch de disponibilité */}
+                  <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                    <Label htmlFor={`status-${product.id}`} className="text-sm cursor-pointer">
+                      {product.status ? "Produit disponible" : "Produit indisponible"}
+                    </Label>
+                    <Switch
+                      id={`status-${product.id}`}
+                      checked={product.status}
+                      onCheckedChange={(checked) => updateStatusMutation.mutate({ id: product.id, status: checked })}
+                      disabled={updateStatusMutation.isPending}
+                    />
+                  </div>
+
+                  {isInCart(product.id) ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => removeFromCart(product.id)}
+                    >
+                      <X className="h-4 w-4" />
+                      Retirer du panier
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => addToCart(product)}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Ajouter au panier
+                    </Button>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleOpenEdit(product)}
+                      disabled={updateMutation.isPending || deleteMutation.isPending}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Modifier
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeletingProduct(product)}
+                      disabled={updateMutation.isPending || deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -261,6 +314,42 @@ export default function ProductsPage() {
         cancelText="Annuler"
         variant="destructive"
       />
+
+      {/* Floating Cart Button */}
+      {totalItems > 0 && (
+        <Button
+          onClick={() => setCartOpen(true)}
+          size="lg"
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 p-0"
+        >
+          <div className="relative">
+            <ShoppingCart className="h-6 w-6" />
+            <Badge
+              variant="destructive"
+              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+            >
+              {totalItems}
+            </Badge>
+          </div>
+        </Button>
+      )}
+
+      {/* Manual Order Cart */}
+      {establishmentData?.establishment && (
+        <ManualOrderCart
+          open={cartOpen}
+          onOpenChange={setCartOpen}
+          restaurantId={establishmentData.establishment.id}
+        />
+      )}
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <ManualOrderCartProvider>
+      <ProductsPageContent />
+    </ManualOrderCartProvider>
   )
 }

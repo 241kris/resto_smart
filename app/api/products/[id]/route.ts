@@ -211,6 +211,96 @@ export async function PUT(
   }
 }
 
+// PATCH - Activer/désactiver un produit
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth_token')
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      )
+    }
+
+    // Vérification du token JWT
+    const { payload } = await jwtVerify(token.value, JWT_SECRET)
+    const userId = payload.userId as string
+
+    // Récupérer l'établissement de l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { establishment: true }
+    })
+
+    if (!user?.establishment) {
+      return NextResponse.json(
+        { error: 'Aucun établissement trouvé' },
+        { status: 404 }
+      )
+    }
+
+    const { id } = await params
+    const body = await request.json()
+    const { status } = body
+
+    // Validation
+    if (typeof status !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Le statut doit être un booléen (true/false)' },
+        { status: 400 }
+      )
+    }
+
+    // Vérifier que le produit existe et appartient à l'établissement
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        id,
+        establishmentId: user.establishment.id
+      }
+    })
+
+    if (!existingProduct) {
+      return NextResponse.json(
+        { error: 'Produit introuvable' },
+        { status: 404 }
+      )
+    }
+
+    // Mettre à jour le statut du produit
+    const product = await prisma.product.update({
+      where: { id },
+      data: { status },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(
+      {
+        message: status ? 'Produit activé avec succès' : 'Produit désactivé avec succès',
+        product
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('Erreur mise à jour statut produit:', error)
+    return NextResponse.json(
+      { error: 'Erreur lors de la mise à jour du statut' },
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE - Supprimer un produit
 export async function DELETE(
   _request: Request,

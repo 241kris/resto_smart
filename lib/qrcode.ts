@@ -1,21 +1,26 @@
 import QRCode from 'qrcode';
 import sharp from 'sharp';
 
-export async function generateQRCode(url: string, tableIdentifier: number | string): Promise<string> {
+export async function generateQRCode(url: string, tableIdentifier?: number | string, showOverlay: boolean = true): Promise<string> {
   try {
     const width = 400;
-    const identifier = String(tableIdentifier);
+    const identifier = tableIdentifier ? String(tableIdentifier) : '';
 
-    // 1. Générer le QR Code avec correction d'erreur haute (permet d'obscurcir jusqu'à 30% du code)
+    // 1. Générer le QR Code avec correction d'erreur selon le besoin
     const qrBuffer = await QRCode.toBuffer(url, {
       width: width,
       margin: 2,
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: showOverlay ? 'H' : 'M', // H si overlay (permet obscurcir 30%), M sinon
       color: {
         dark: '#000000',
         light: '#FFFFFF'
       }
     });
+
+    // Si pas d'overlay demandé, retourner directement le QR code
+    if (!showOverlay || !identifier) {
+      return `data:image/png;base64,${qrBuffer.toString('base64')}`;
+    }
 
     // 2. Calculer la taille de police dynamiquement selon la longueur
     let fontSize = 36;
@@ -34,39 +39,19 @@ export async function generateQRCode(url: string, tableIdentifier: number | stri
       overlaySize = 90;
     }
 
-    // 3. Créer l'overlay élégant avec fond blanc, ombre et bordure
+    // 3. Créer l'overlay simplifié et compatible production
+    // Utilise un SVG sans filtres complexes pour une meilleure compatibilité
     const textOverlay = Buffer.from(`
       <svg width="${overlaySize}" height="${overlaySize}" xmlns="http://www.w3.org/2000/svg">
-        <!-- Dégradé subtil pour le fond -->
-        <defs>
-          <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:1" />
-            <stop offset="100%" style="stop-color:rgb(250,250,250);stop-opacity:1" />
-          </linearGradient>
-          <!-- Filtre pour l'ombre portée -->
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-            <feOffset dx="0" dy="2" result="offsetblur"/>
-            <feComponentTransfer>
-              <feFuncA type="linear" slope="0.3"/>
-            </feComponentTransfer>
-            <feMerge>
-              <feMergeNode/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-
-        <!-- Cercle de fond avec ombre -->
+        <!-- Cercle de fond blanc -->
         <circle
           cx="${overlaySize / 2}"
           cy="${overlaySize / 2}"
           r="${overlaySize / 2 - 4}"
-          fill="url(#grad1)"
-          filter="url(#shadow)"
+          fill="#FFFFFF"
         />
 
-        <!-- Bordure du cercle -->
+        <!-- Bordure orange -->
         <circle
           cx="${overlaySize / 2}"
           cy="${overlaySize / 2}"
@@ -76,32 +61,31 @@ export async function generateQRCode(url: string, tableIdentifier: number | stri
           stroke-width="3"
         />
 
-        <!-- Texte principal avec effet -->
+        <!-- Contour blanc pour le texte (meilleure lisibilité) -->
         <text
           x="${overlaySize / 2}"
-          y="${overlaySize / 2 + 2}"
+          y="${overlaySize / 2}"
           text-anchor="middle"
-          dominant-baseline="middle"
+          dominant-baseline="central"
           font-family="Arial, Helvetica, sans-serif"
           font-weight="bold"
           font-size="${fontSize}"
-          fill="#1a1a1a"
-          style="paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round;"
-        >
-          ${identifier}
-        </text>
+          fill="#FFFFFF"
+          stroke="#FFFFFF"
+          stroke-width="5"
+        >${identifier}</text>
+
+        <!-- Texte principal orange -->
         <text
           x="${overlaySize / 2}"
-          y="${overlaySize / 2 + 2}"
+          y="${overlaySize / 2}"
           text-anchor="middle"
-          dominant-baseline="middle"
+          dominant-baseline="central"
           font-family="Arial, Helvetica, sans-serif"
           font-weight="bold"
           font-size="${fontSize}"
           fill="#F97316"
-        >
-          ${identifier}
-        </text>
+        >${identifier}</text>
       </svg>
     `);
 
@@ -111,13 +95,36 @@ export async function generateQRCode(url: string, tableIdentifier: number | stri
         input: textOverlay,
         gravity: 'center'
       }])
-      .png()
+      .png({
+        compressionLevel: 9,
+        adaptiveFiltering: true
+      })
       .toBuffer();
 
     return `data:image/png;base64,${finalImageBuffer.toString('base64')}`;
 
   } catch (error) {
     console.error('Erreur lors de la génération du QR Code:', error);
-    throw new Error('Impossible de générer le QR Code');
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.error('Identifier:', tableIdentifier);
+    console.error('Show overlay:', showOverlay);
+
+    // En cas d'erreur, retourner au moins le QR code sans overlay
+    console.warn('Retour au QR code simple sans overlay à cause d\'une erreur');
+    try {
+      const simpleQrBuffer = await QRCode.toBuffer(url, {
+        width: 400,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      return `data:image/png;base64,${simpleQrBuffer.toString('base64')}`;
+    } catch (fallbackError) {
+      console.error('Erreur même avec QR simple:', fallbackError);
+      throw new Error('Impossible de générer le QR Code');
+    }
   }
 }

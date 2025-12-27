@@ -79,8 +79,12 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
     toast.success('Document Word téléchargé avec succès !')
   }
 
-  // Préparer les données pour les graphiques (tous les produits, limités à 20 pour la lisibilité)
-  const top20Products = data?.products.slice(0, 20) || []
+  // Filtrer uniquement les produits vendus (quantité > 0)
+  const soldProducts = data?.products.filter(product => product.totalQuantity > 0) || []
+  const hasSoldProducts = soldProducts.length > 0
+
+  // Préparer les données pour les graphiques (uniquement produits vendus, limités à 20 pour la lisibilité)
+  const top20Products = soldProducts.slice(0, 20)
 
   const revenueChartData = {
     labels: top20Products.map(p => p.productName.length > 25 ? p.productName.substring(0, 25) + '...' : p.productName),
@@ -210,7 +214,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Revenus par Produit</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {data.products.length > 20 ? 'Top 20 des produits qui génèrent le plus de revenus' : 'Tous les produits'}
+              {soldProducts.length > 20 ? 'Top 20 des produits qui génèrent le plus de revenus' : `${soldProducts.length} produit${soldProducts.length > 1 ? 's' : ''} vendu${soldProducts.length > 1 ? 's' : ''}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -224,7 +228,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Quantités Vendues</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {data.products.length > 20 ? 'Top 20 des produits les plus vendus en quantité' : 'Tous les produits'}
+              {soldProducts.length > 20 ? 'Top 20 des produits les plus vendus en quantité' : `${soldProducts.length} produit${soldProducts.length > 1 ? 's' : ''} vendu${soldProducts.length > 1 ? 's' : ''}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -240,12 +244,20 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
         <div>
           <h2 className="text-lg sm:text-xl font-bold">Détails par Produit</h2>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Liste complète de tous les produits ({data.products.length} produits)
+            {hasSoldProducts
+              ? `Produits vendus (${soldProducts.length} produit${soldProducts.length > 1 ? 's' : ''})`
+              : 'Aucun produit vendu pour cette période'
+            }
           </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 w-full sm:w-auto"
+              disabled={!hasSoldProducts}
+            >
               <Download className="h-4 w-4" />
               Télécharger l'inventaire
             </Button>
@@ -264,18 +276,18 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
       </div>
 
       {/* Cards sur mobile/tablette */}
-      {data.products.length === 0 ? (
+      {!hasSoldProducts ? (
         <Card>
           <CardContent className="text-center py-12">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Aucun produit trouvé</p>
+            <p className="text-muted-foreground">Aucun produit vendu pour cette période</p>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="lg:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {data.products.map((product, index) => (
+              {soldProducts.map((product, index) => (
                 <ProductStatCard
                   key={product.productId}
                   product={product}
@@ -292,7 +304,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[80px]">Image</TableHead>
+                      <TableHead className="w-20">Image</TableHead>
                       <TableHead>Produit</TableHead>
                       <TableHead className="text-right">Prix</TableHead>
                       <TableHead className="text-right">Qté Vendue</TableHead>
@@ -302,7 +314,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.products.map((product, index) => (
+                    {soldProducts.map((product, index) => (
                       <TableRow key={product.productId}>
                         <TableCell>
                           <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted">
@@ -334,30 +346,24 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                           {product.currentPrice.toFixed(2)} FCFA
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={product.totalQuantity > 0 ? 'font-semibold text-blue-600' : 'text-muted-foreground'}>
+                          <span className="font-semibold text-blue-600">
                             {product.totalQuantity}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={product.orderCount > 0 ? 'font-semibold' : 'text-muted-foreground'}>
+                          <span className="font-semibold">
                             {product.orderCount}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={product.totalRevenue > 0 ? 'font-bold text-green-600' : 'text-muted-foreground'}>
+                          <span className="font-bold text-green-600">
                             {product.totalRevenue.toFixed(2)} FCFA
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          {product.totalQuantity > 0 ? (
-                            <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
-                              Vendu
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-                              Non vendu
-                            </Badge>
-                          )}
+                          <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
+                            Vendu
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}

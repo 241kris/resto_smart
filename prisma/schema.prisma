@@ -80,6 +80,7 @@ model Product {
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+  status    Boolean  @default(true) // true = disponible, false = indisponible
 
   orderItems OrderItem[]
 }
