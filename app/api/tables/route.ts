@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const qrUrl = `${baseUrl}/t/${restaurantId}/table/${tableToken}`;
 
-    // Image QR (Nom au centre)
-    const qrCodeImage = await generateQRCode(qrUrl, trimmedName);
+    // Image QR
+    const qrCodeImage = await generateQRCode(qrUrl);
 
     // Upload Supabase
     const qrCodeFileName = `${restaurantId}/table-${trimmedName}-${tableToken}.png`;
