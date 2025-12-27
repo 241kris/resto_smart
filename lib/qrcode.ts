@@ -1,5 +1,5 @@
-import QRCode from 'qrcode';
-import sharp from 'sharp';
+import * as QRCode from 'qrcode';
+import { createCanvas, loadImage } from 'canvas';
 
 export async function generateQRCode(url: string, tableIdentifier?: number | string, showOverlay: boolean = true): Promise<string> {
   try {
@@ -22,7 +22,15 @@ export async function generateQRCode(url: string, tableIdentifier?: number | str
       return `data:image/png;base64,${qrBuffer.toString('base64')}`;
     }
 
-    // 2. Calculer la taille de police dynamiquement selon la longueur
+    // 2. Charger l'image QR dans un canvas
+    const qrImage = await loadImage(qrBuffer);
+    const canvas = createCanvas(width, width);
+    const ctx = canvas.getContext('2d');
+
+    // 3. Dessiner le QR code
+    ctx.drawImage(qrImage, 0, 0, width, width);
+
+    // 4. Calculer la taille de police dynamiquement selon la longueur
     let fontSize = 36;
     let overlaySize = 120;
 
@@ -39,69 +47,48 @@ export async function generateQRCode(url: string, tableIdentifier?: number | str
       overlaySize = 90;
     }
 
-    // 3. Créer l'overlay simplifié et compatible production
-    // Utilise un SVG sans filtres complexes pour une meilleure compatibilité
-    const textOverlay = Buffer.from(`
-      <svg width="${overlaySize}" height="${overlaySize}" xmlns="http://www.w3.org/2000/svg">
-        <!-- Cercle de fond blanc -->
-        <circle
-          cx="${overlaySize / 2}"
-          cy="${overlaySize / 2}"
-          r="${overlaySize / 2 - 4}"
-          fill="#FFFFFF"
-        />
+    // 5. Calculer le centre et le rayon
+    const centerX = width / 2;
+    const centerY = width / 2;
+    const radius = overlaySize / 2 - 4;
 
-        <!-- Bordure orange -->
-        <circle
-          cx="${overlaySize / 2}"
-          cy="${overlaySize / 2}"
-          r="${overlaySize / 2 - 4}"
-          fill="none"
-          stroke="#F97316"
-          stroke-width="3"
-        />
+    // 6. Dessiner le cercle de fond blanc avec ombre
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
 
-        <!-- Contour blanc pour le texte (meilleure lisibilité) -->
-        <text
-          x="${overlaySize / 2}"
-          y="${overlaySize / 2}"
-          text-anchor="middle"
-          dominant-baseline="central"
-          font-family="Arial, Helvetica, sans-serif"
-          font-weight="bold"
-          font-size="${fontSize}"
-          fill="#FFFFFF"
-          stroke="#FFFFFF"
-          stroke-width="5"
-        >${identifier}</text>
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fill();
 
-        <!-- Texte principal orange -->
-        <text
-          x="${overlaySize / 2}"
-          y="${overlaySize / 2}"
-          text-anchor="middle"
-          dominant-baseline="central"
-          font-family="Arial, Helvetica, sans-serif"
-          font-weight="bold"
-          font-size="${fontSize}"
-          fill="#F97316"
-        >${identifier}</text>
-      </svg>
-    `);
+    // 7. Dessiner la bordure orange
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#F97316';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
 
-    // 4. Fusionner le QR code avec l'overlay au centre
-    const finalImageBuffer = await sharp(qrBuffer)
-      .composite([{
-        input: textOverlay,
-        gravity: 'center'
-      }])
-      .png({
-        compressionLevel: 9,
-        adaptiveFiltering: true
-      })
-      .toBuffer();
+    // 8. Dessiner le texte
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
 
-    return `data:image/png;base64,${finalImageBuffer.toString('base64')}`;
+    // Contour blanc pour meilleure lisibilité
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(identifier, centerX, centerY);
+
+    // Texte principal orange
+    ctx.fillStyle = '#F97316';
+    ctx.fillText(identifier, centerX, centerY);
+
+    // 9. Convertir en base64
+    const finalImageBase64 = canvas.toDataURL('image/png');
+    return finalImageBase64;
 
   } catch (error) {
     console.error('Erreur lors de la génération du QR Code:', error);
