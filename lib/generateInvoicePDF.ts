@@ -222,8 +222,8 @@ export function generateInvoicePDF(order: InvoiceOrder, establishment: Establish
   const tableData = order.items.map((item) => [
     item.product.name,
     item.quantity.toString(),
-    `${item.price.toFixed(2)} FCFA`,
-    `${item.total.toFixed(2)} FCFA`,
+    `${item.price % 1 === 0 ? item.price : item.price.toFixed(2)} FCFA`,
+    `${item.total % 1 === 0 ? item.total : item.total.toFixed(2)} FCFA`,
   ])
 
   autoTable(doc, {
@@ -270,7 +270,7 @@ export function generateInvoicePDF(order: InvoiceOrder, establishment: Establish
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...darkGray)
   doc.text('Sous-total:', 125, yPosition + 8)
-  doc.text(`${order.totalAmount.toFixed(2)} FCFA`, 185, yPosition + 8, { align: 'right' })
+  doc.text(`${order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA`, 185, yPosition + 8, { align: 'right' })
 
   // Ligne de séparation
   doc.setDrawColor(...darkGray)
@@ -283,7 +283,7 @@ export function generateInvoicePDF(order: InvoiceOrder, establishment: Establish
   doc.setTextColor(...primaryColor)
   doc.text('TOTAL:', 125, yPosition + 19)
   doc.setFontSize(14)
-  doc.text(`${order.totalAmount.toFixed(2)} FCFA`, 185, yPosition + 19, { align: 'right' })
+  doc.text(`${order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA`, 185, yPosition + 19, { align: 'right' })
 
   // ==========================================
   // Pied de page

@@ -67,7 +67,7 @@ export function ProductStatCard({ product, rank }: ProductStatCardProps) {
         {/* Prix */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Prix unitaire</span>
-          <span className="font-semibold">{product.currentPrice.toFixed(2)} FCFA</span>
+          <span className="font-semibold">{product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA</span>
         </div>
 
         {/* Quantité */}
@@ -93,7 +93,7 @@ export function ProductStatCard({ product, rank }: ProductStatCardProps) {
             Revenu total
           </span>
           <span className={isSold ? "font-bold text-green-600" : "text-muted-foreground"}>
-            {product.totalRevenue.toFixed(2)} FCFA
+            {product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA
           </span>
         </div>
       </CardContent>

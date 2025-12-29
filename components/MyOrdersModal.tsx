@@ -166,7 +166,7 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
                   <div className="flex flex-col items-end gap-2">
                     {getStatusBadge(order.status)}
                     <p className="font-bold text-sm text-orange-600">
-                      {order.totalAmount.toFixed(2)} FCFA
+                      {order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA
                     </p>
                   </div>
                 </div>
@@ -181,7 +181,7 @@ export function MyOrdersModal({ open, onOpenChange }: MyOrdersModalProps) {
                       <span>
                         {item.quantity}x {item.product.name}
                       </span>
-                      <span className="font-medium">{item.total.toFixed(2)} FCFA</span>
+                      <span className="font-medium">{item.total % 1 === 0 ? item.total : item.total.toFixed(2)} FCFA</span>
                     </div>
                   ))}
                 </div>

@@ -13,6 +13,8 @@ export interface Product {
   image: string | null
   categoryId: string | null
   category: Category | null
+  isQuantifiable: boolean
+  quantity: number | null
 }
 
 export interface Restaurant {

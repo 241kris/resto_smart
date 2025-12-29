@@ -10,6 +10,8 @@ export interface Product {
   establishmentId: string
   createdAt: string
   status: boolean
+  isQuantifiable: boolean
+  quantity: number | null
   category: {
     id: string
     name: string
@@ -22,6 +24,8 @@ export interface ProductFormData {
   price: number
   categoryId?: string
   image?: string
+  isQuantifiable?: boolean
+  quantity?: number
 }
 
 // Hook pour récupérer tous les produits

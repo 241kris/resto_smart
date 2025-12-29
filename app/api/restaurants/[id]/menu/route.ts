@@ -100,6 +100,8 @@ export async function GET(
         image: product.image,
         categoryId: product.categoryId,
         category: product.category,
+        isQuantifiable: product.isQuantifiable,
+        quantity: product.quantity,
       })),
       totalProducts: products.length,
       totalCategories: categories.length,

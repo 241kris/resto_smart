@@ -9,6 +9,10 @@ import {
   Store,
   LogOut,
   BarChart3,
+  Package,
+  Users,
+  Calendar,
+  ClipboardCheck,
 } from "lucide-react"
 import {
   Sidebar,
@@ -38,6 +42,10 @@ const menuItems = [
   { id: "categories", label: "Catégories", icon: FolderOpen },
   { id: "tables", label: "Tables", icon: QrCode },
   { id: "orders", label: "Commandes", icon: ShoppingCart },
+  { id: "restock-history", label: "Historique Stock", icon: Package },
+  { id: "employees", label: "Employés", icon: Users },
+  { id: "schedules", label: "Plannings", icon: Calendar },
+  { id: "attendance", label: "Pointages", icon: ClipboardCheck },
   { id: "establishment", label: "Établissement", icon: Store },
 ]
 

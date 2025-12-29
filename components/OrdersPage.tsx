@@ -314,7 +314,7 @@ export default function OrdersPage() {
                 <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalRevenue.toFixed(2)} FCFA</div>
+                <div className="text-2xl font-bold">{totalRevenue % 1 === 0 ? totalRevenue : totalRevenue.toFixed(2)} FCFA</div>
               </CardContent>
             </Card>
           </div>
@@ -400,7 +400,7 @@ export default function OrdersPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold">{order.totalAmount.toFixed(2)} FCFA</span>
+                        <span className="font-semibold">{order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA</span>
                       </TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell className="text-right">

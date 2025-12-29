@@ -66,6 +66,13 @@ export async function PATCH(
       where: {
         id,
         restaurantId: user.establishment.id
+      },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
       }
     });
 
@@ -76,30 +83,59 @@ export async function PATCH(
       );
     }
 
-    // Mettre à jour le statut
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        table: {
-          select: {
-            id: true,
-            name: true,
-            tableToken: true,
+    // Mettre à jour le statut avec gestion du stock
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // Si le statut passe à PAID et que ce n'était pas déjà PAID, déduire le stock
+      if (status === 'PAID' && order.status !== 'PAID') {
+        for (const item of order.items) {
+          const product = item.product;
+
+          if (product.isQuantifiable) {
+            const currentStock = product.quantity ?? 0;
+
+            // Vérifier si le stock est suffisant
+            if (currentStock < item.quantity) {
+              throw new Error(
+                `Stock insuffisant pour "${product.name}". Stock disponible: ${currentStock}, quantité demandée: ${item.quantity}`
+              );
+            }
+
+            // Déduire la quantité du stock
+            await tx.product.update({
+              where: { id: product.id },
+              data: {
+                quantity: currentStock - item.quantity
+              }
+            });
           }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
+        }
+      }
+
+      // Mettre à jour le statut de la commande
+      return await tx.order.update({
+        where: { id },
+        data: { status },
+        include: {
+          table: {
+            select: {
+              id: true,
+              name: true,
+              tableToken: true,
+            }
+          },
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                }
               }
             }
           }
         }
-      }
+      });
     });
 
     return NextResponse.json({

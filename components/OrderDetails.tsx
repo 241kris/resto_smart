@@ -166,11 +166,11 @@ export function OrderDetails({
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm mb-1 truncate">{item.product.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.quantity} × {item.price.toFixed(2)} FCFA
+                    {item.quantity} × {item.price % 1 === 0 ? item.price : item.price.toFixed(2)} FCFA
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-primary">{item.total.toFixed(2)} FCFA</p>
+                  <p className="font-bold text-primary">{item.total % 1 === 0 ? item.total : item.total.toFixed(2)} FCFA</p>
                 </div>
               </div>
             ))}
@@ -182,7 +182,7 @@ export function OrderDetails({
           <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
             <span className="font-bold text-lg">Total</span>
             <span className="text-xl font-bold text-primary">
-              {order.totalAmount.toFixed(2)} FCFA
+              {order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA
             </span>
           </div>
         </CardContent>

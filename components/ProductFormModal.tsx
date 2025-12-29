@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -48,7 +49,9 @@ export default function ProductFormModal({
     description: "",
     price: 0,
     categoryId: "NONE",
-    image: ""
+    image: "",
+    isQuantifiable: false,
+    quantity: undefined
   })
   const [imagePreview, setImagePreview] = useState<string>("")
   const [imageError, setImageError] = useState<string>("")
@@ -64,7 +67,9 @@ export default function ProductFormModal({
         description: product.description || "",
         price: product.price,
         categoryId: product.categoryId || "NONE",
-        image: product.image || ""
+        image: product.image || "",
+        isQuantifiable: product.isQuantifiable || false,
+        quantity: product.quantity ?? undefined
       })
       setImagePreview(product.image || "")
       // Détecter si c'est une URL ou un fichier base64
@@ -81,7 +86,9 @@ export default function ProductFormModal({
         description: "",
         price: 0,
         categoryId: "NONE",
-        image: ""
+        image: "",
+        isQuantifiable: false,
+        quantity: undefined
       })
       setImagePreview("")
       setImageMode("file")
@@ -354,6 +361,45 @@ export default function ProductFormModal({
               />
             </div>
             <div></div>
+          </div>
+
+          {/* Gestion du stock */}
+          <div className="space-y-4 pt-2 pb-2 border-t">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isQuantifiable"
+                checked={formData.isQuantifiable}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    isQuantifiable: checked as boolean,
+                    quantity: checked ? prev.quantity : undefined
+                  }))
+                }}
+                disabled={isLoading}
+              />
+              <Label htmlFor="isQuantifiable" className="cursor-pointer">
+                Ce produit a un stock quantifiable
+              </Label>
+            </div>
+
+            {formData.isQuantifiable && (
+              <div className="space-y-2 pl-6">
+                <Label htmlFor="quantity">Quantité en stock initiale</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  value={formData.quantity ?? ""}
+                  onChange={(e) => handleInputChange("quantity", parseInt(e.target.value) || 0)}
+                  placeholder="Ex: 100"
+                  disabled={isLoading}
+                />
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                  Laissez vide si vous ne souhaitez pas définir une quantité initiale
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Description */}

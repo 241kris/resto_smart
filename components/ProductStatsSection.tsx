@@ -197,7 +197,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {data.summary.totalRevenue.toFixed(2)} FCFA
+                  {data.summary.totalRevenue % 1 === 0 ? data.summary.totalRevenue : data.summary.totalRevenue.toFixed(2)} FCFA
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Chiffre d'affaires des plats
@@ -343,7 +343,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.currentPrice.toFixed(2)} FCFA
+                          {product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-semibold text-blue-600">
@@ -357,7 +357,7 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-bold text-green-600">
-                            {product.totalRevenue.toFixed(2)} FCFA
+                            {product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA
                           </span>
                         </TableCell>
                         <TableCell className="text-center">

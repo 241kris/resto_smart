@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {data.summary.totalRevenue.toFixed(2)} FCFA
+                      {data.summary.totalRevenue % 1 === 0 ? data.summary.totalRevenue : data.summary.totalRevenue.toFixed(2)} FCFA
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {period === '7days' ? '7 derniers jours' : `${monthsCount} derniers mois`}
@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-600">
-                      {data.summary.averageOrderValue.toFixed(2)} FCFA
+                      {data.summary.averageOrderValue % 1 === 0 ? data.summary.averageOrderValue : data.summary.averageOrderValue.toFixed(2)} FCFA
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Moyenne par commande

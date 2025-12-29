@@ -162,7 +162,7 @@ export function OrderCard({
           </div>
           <div className="text-right">
             <p className="text-muted-foreground text-xs mb-1">Montant</p>
-            <p className="font-bold text-primary text-base">{order.totalAmount.toFixed(2)} FCFA</p>
+            <p className="font-bold text-primary text-base">{order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA</p>
           </div>
         </div>
 

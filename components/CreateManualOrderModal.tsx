@@ -131,7 +131,7 @@ export default function CreateManualOrderModal({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{product.name}</p>
-                <p className="text-sm text-muted-foreground">{product.price.toFixed(2)} FCFA</p>
+                <p className="text-sm text-muted-foreground">{product.price % 1 === 0 ? product.price : product.price.toFixed(2)} FCFA</p>
               </div>
             </div>
           </div>
@@ -204,7 +204,7 @@ export default function CreateManualOrderModal({
           <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
             <span className="font-medium">Total</span>
             <span className="text-2xl font-bold text-primary">
-              {totalAmount.toFixed(2)} FCFA
+              {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(2)} FCFA
             </span>
           </div>
 

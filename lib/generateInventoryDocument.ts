@@ -58,16 +58,16 @@ export async function generateInventoryPDF(data: InventoryData, establishmentNam
   doc.text(`Produits au catalogue: ${data.summary.totalProductsInCatalog}`, 14, 62)
   doc.text(`Produits vendus: ${data.summary.totalProducts}`, 14, 68)
   doc.text(`Quantité totale vendue: ${data.summary.totalQuantitySold}`, 14, 74)
-  doc.text(`Revenu total: ${data.summary.totalRevenue.toFixed(2)} FCFA`, 14, 80)
+  doc.text(`Revenu total: ${data.summary.totalRevenue % 1 === 0 ? data.summary.totalRevenue : data.summary.totalRevenue.toFixed(2)} FCFA`, 14, 80)
 
   // Tableau des produits
   const tableData = data.products.map((product, index) => [
     (index + 1).toString(),
     product.productName,
-    `${product.currentPrice.toFixed(2)} FCFA`,
+    `${product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA`,
     product.totalQuantity.toString(),
     product.orderCount.toString(),
-    `${product.totalRevenue.toFixed(2)} FCFA`,
+    `${product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA`,
     product.totalQuantity > 0 ? 'Vendu' : 'Non vendu'
   ])
 
@@ -183,7 +183,7 @@ export async function generateInventoryWord(data: InventoryData, establishmentNa
             children: [new Paragraph({ text: product.productName, alignment: AlignmentType.LEFT })]
           }),
           new TableCell({
-            children: [new Paragraph({ text: `${product.currentPrice.toFixed(2)} FCFA`, alignment: AlignmentType.RIGHT })]
+            children: [new Paragraph({ text: `${product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA`, alignment: AlignmentType.RIGHT })]
           }),
           new TableCell({
             children: [new Paragraph({ text: product.totalQuantity.toString(), alignment: AlignmentType.CENTER })]
@@ -192,7 +192,7 @@ export async function generateInventoryWord(data: InventoryData, establishmentNa
             children: [new Paragraph({ text: product.orderCount.toString(), alignment: AlignmentType.CENTER })]
           }),
           new TableCell({
-            children: [new Paragraph({ text: `${product.totalRevenue.toFixed(2)} FCFA`, alignment: AlignmentType.RIGHT })]
+            children: [new Paragraph({ text: `${product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA`, alignment: AlignmentType.RIGHT })]
           }),
           new TableCell({
             children: [new Paragraph({
@@ -255,7 +255,7 @@ export async function generateInventoryWord(data: InventoryData, establishmentNa
           spacing: { after: 100 }
         }),
         new Paragraph({
-          text: `Revenu total: ${data.summary.totalRevenue.toFixed(2)} FCFA`,
+          text: `Revenu total: ${data.summary.totalRevenue % 1 === 0 ? data.summary.totalRevenue : data.summary.totalRevenue.toFixed(2)} FCFA`,
           spacing: { after: 300 }
         }),
         // Tableau

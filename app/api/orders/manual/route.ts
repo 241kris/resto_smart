@@ -117,42 +117,71 @@ export async function POST(request: NextRequest) {
       return sum + (item.price * item.quantity);
     }, 0);
 
-    // 7. Créer la commande avec ses items
-    const order = await prisma.order.create({
-      data: {
-        restaurantId: user.establishment.id,
-        tableId: tableId || null,
-        totalAmount,
-        status,
-        items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity,
-          }))
-        }
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-              }
+    // 7. Créer la commande avec ses items et gérer le stock
+    const order = await prisma.$transaction(async (tx) => {
+      // Si le statut est PAID, déduire le stock des produits quantifiables
+      if (status === 'PAID') {
+        for (const item of items) {
+          const product = products.find(p => p.id === item.productId);
+
+          if (product?.isQuantifiable) {
+            const currentStock = product.quantity ?? 0;
+
+            // Vérifier si le stock est suffisant
+            if (currentStock < item.quantity) {
+              throw new Error(
+                `Stock insuffisant pour "${product.name}". Stock disponible: ${currentStock}, quantité demandée: ${item.quantity}`
+              );
             }
-          }
-        },
-        table: {
-          select: {
-            id: true,
-            name: true,
-            tableToken: true,
+
+            // Déduire la quantité du stock
+            await tx.product.update({
+              where: { id: product.id },
+              data: {
+                quantity: currentStock - item.quantity
+              }
+            });
           }
         }
       }
+
+      // Créer la commande
+      return await tx.order.create({
+        data: {
+          restaurantId: user.establishment!.id,
+          tableId: tableId || null,
+          totalAmount,
+          status,
+          items: {
+            create: items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.price * item.quantity,
+            }))
+          }
+        },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                }
+              }
+            }
+          },
+          table: {
+            select: {
+              id: true,
+              name: true,
+              tableToken: true,
+            }
+          }
+        }
+      });
     });
 
     // 8. Retourner la commande créée

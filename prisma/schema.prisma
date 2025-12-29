@@ -27,12 +27,12 @@ model User {
 model Establishment {
   id          String  @id @default(uuid())
   name        String
-  slug        String 
-  description String? 
+  slug        String
+  description String?
   email       String?
-  phones      Json    // Array de numéros de téléphone ["0123456789", "0987654321"]
-  images      Json    // Array d'URLs d'images (max 7) ["url1", "url2", ...]
-  address     Json?    // Objet adresse structuré {street, city, postalCode, country}
+  phones      Json // Array de numéros de téléphone ["0123456789", "0987654321"]
+  images      Json // Array d'URLs d'images (max 7) ["url1", "url2", ...]
+  address     Json? // Objet adresse structuré {street, city, postalCode, country}
   latitude    Float?
   longitude   Float?
 
@@ -46,9 +46,11 @@ model Establishment {
 
   createdAt DateTime @default(now())
 
-  tables Table[]
+  tables    Table[]
+  orders    Order[]
+  employees Employee[] // Employés de l'établissement
 
-  orders Order[]
+  attendanceMonths AttendanceMonth[]
 }
 
 model Category {
@@ -71,6 +73,10 @@ model Product {
   price       Float
   description String?
 
+  // Gestion des stocks
+  isQuantifiable Boolean @default(false) // true = produit avec stock, false = produit sans stock
+  quantity       Int? // Quantité en stock (optionnel)
+
   // Relation vers Establishment
   establishmentId String
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
@@ -82,16 +88,17 @@ model Product {
   createdAt DateTime @default(now())
   status    Boolean  @default(true) // true = disponible, false = indisponible
 
-  orderItems OrderItem[]
+  orderItems     OrderItem[]
+  restockHistory RestockHistory[]
 }
 
 model Table {
-  id          String @id @default(cuid())
+  id         String @id @default(cuid())
   // ID interne unique
-  name        String // Nom de la table (chiffres ou lettres: 1, A, VIP, T25, etc.)
-  tableToken  String @unique // Token unique pour QR / URL
-  qrUrl       String // URL complète encodée dans le QR Code
-  qrCodePath  String // Chemin vers l'image QR Code dans /public
+  name       String // Nom de la table (chiffres ou lettres: 1, A, VIP, T25, etc.)
+  tableToken String @unique // Token unique pour QR / URL
+  qrUrl      String // URL complète encodée dans le QR Code
+  qrCodePath String // Chemin vers l'image QR Code dans /public
 
   restaurantId String
   restaurant   Establishment @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -104,52 +111,370 @@ model Table {
   @@unique([restaurantId, name]) // Un restaurant ne peut pas avoir deux tables avec le même nom
 }
 
-
 model Order {
-  id            String      @id @default(cuid())
+  id String @id @default(cuid())
 
-  restaurantId  String
-  restaurant    Establishment @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Establishment @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
-  tableId       String?
-  table         Table?        @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId String?
+  table   Table?  @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   // Montant total de la commande au moment du passage
-  totalAmount   Float
+  totalAmount Float
 
   // Statut de la commande
-  status        OrderStatus @default(PENDING)
+  status OrderStatus @default(PENDING)
 
   // Informations client pour les commandes publiques (optionnel)
-  customer      Json?
+  customer Json?
 
   // Produits commandés
-  items         OrderItem[]
+  items OrderItem[]
 
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
-
 
 model OrderItem {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  quantity    Int
-  price       Float      // prix unitaire au moment de la commande
-  total       Float      // quantity * price
+  quantity Int
+  price    Float // prix unitaire au moment de la commande
+  total    Float // quantity * price
 }
+
 enum OrderStatus {
-  PENDING  // en cours
+  PENDING // en cours
   PAID //payé
-  CANCELLED//annulé
-  completed //traité 
-
+  CANCELLED //annulé
+  completed //traité
 }
+
+model RestockHistory {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Int // Quantité ajoutée lors du ravitaillement
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------
+//  GESTION DES EMPLOYÉS
+// ---------------------------------------
+
+model Employee {
+  id String @id @default(cuid())
+
+  // Relation vers l'établissement
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  // Informations personnelles
+  firstName   String // Prénom
+  lastName    String // Nom
+  avatar      String? // URL de l'avatar (optionnel)
+  dateOfBirth DateTime // Date de naissance
+  gender      Gender // Sexe (Homme/Femme/Autre)
+  phone       String // Numéro de téléphone
+  email       String? // Email (optionnel)
+  address     String // Adresse complète
+
+  identityNumber String? // Numéro CNI/Passeport (optionnel selon législation)
+
+  // Informations professionnelles
+  position     EmployeePosition // Poste/Rôle (Serveur, Cuisinier, etc.)
+  department   EmployeeDepartment // Département (Salle, Cuisine, Administration)
+  hireDate     DateTime // Date d'embauche
+  contractType ContractType // Type de contrat (CDI, CDD, etc.)
+  status       EmployeeStatus     @default(ACTIVE) // Statut (Actif, En congé, etc.)
+
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  documents          EmployeeDocument[]              // Documents de l'employé
+  scheduleAssignment EmployeeScheduleAssignment?     // Un employé ne peut avoir qu'un seul planning à la fois
+  attendances        Attendance[]                    // Pointages journaliers
+  leavePeriods       LeavePeriod[]                   // Périodes d'absence planifiées
+
+  @@index([establishmentId])
+  @@index([status])
+  @@index([position])
+}
+
+model EmployeeDocument {
+  id String @id @default(cuid())
+
+  // Relation vers l'employé
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Informations du document
+  documentType String // Type de document (personnalisable: "Contrat de travail", "Pièce d'identité", "CV", "Certificat hygiène", etc.)
+  fileName     String // Nom original du fichier
+  fileUrl      String // URL du fichier stocké (Supabase, S3, etc.)
+
+  // Métadonnées
+  uploadedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([documentType])
+}
+
+model EmployeeSchedule {
+  id String @id @default(cuid())
+
+  name   String // ex: "Planning Équipe Matin"
+  status ScheduleStatus @default(ACTIVE)
+
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  days EmployeeScheduleDay[]
+  employeeAssignments EmployeeScheduleAssignment[] // Plusieurs employés peuvent avoir ce planning
+
+  @@index([status])
+}
+
+// Table de jonction pour la relation many-to-many entre Employee et EmployeeSchedule
+// avec la contrainte qu'un employé ne peut avoir qu'un seul planning à la fois
+model EmployeeScheduleAssignment {
+  id String @id @default(cuid())
+
+  // Relation vers l'employé (unique car un employé ne peut avoir qu'un planning)
+  employeeId String @unique
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Relation vers le planning (plusieurs employés peuvent partager le même planning)
+  scheduleId String
+  schedule   EmployeeSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Métadonnées
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([scheduleId])
+}
+
+model EmployeeScheduleDay {
+  id String @id @default(cuid())
+
+  // Relation vers le planning
+  scheduleId String
+  schedule   EmployeeSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  dayOfWeek WeekDay
+
+  // Configuration du jour
+  isWorkingDay Boolean @default(true)
+  startTime    String?
+  endTime      String?
+
+  // Heures de travail
+  dailyHoursCalculated Float? // calcul automatique (end - start)
+  dailyHoursManual     Float? // saisie manuelle (optionnelle)
+
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scheduleId, dayOfWeek])
+  @@index([dayOfWeek])
+}
+
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ---------------------------------------
+//  ENUMS POUR EMPLOYÉS
+// ---------------------------------------
+
+enum Gender {
+  MALE // Homme
+  FEMALE // Femme
+  OTHER // Autre
+}
+
+enum EmployeePosition {
+  WAITER // Serveur
+  COOK // Cuisinier
+  CHEF // Chef
+  CASHIER // Caissier
+  MANAGER // Manager
+  DELIVERY // Livreur
+}
+
+enum EmployeeDepartment {
+  DINING_ROOM // Salle
+  KITCHEN // Cuisine
+  ADMINISTRATION // Administration
+  DELIVERY // Livraison
+}
+
+enum ContractType {
+  CDI // Contrat à Durée Indéterminée
+  CDD // Contrat à Durée Déterminée
+  PART_TIME // Temps partiel
+  DAILY_EXTRA // Extra / Journalier
+}
+
+enum EmployeeStatus {
+  ACTIVE // Actif
+  ON_LEAVE // En congé
+  SUSPENDED // Suspendu
+  TERMINATED // Résilié
+}
+
+
+model AttendanceMonth {
+  id String @id @default(cuid())
+
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  year  Int  // 2025
+  month Int  // 1 = Janvier
+
+  status AttendanceMonthStatus @default(OPEN)
+
+  openedAt  DateTime @default(now())
+  closedAt  DateTime?
+
+  // Relations
+  attendances Attendance[]
+
+  @@unique([establishmentId, year, month])
+  @@index([status])
+}
+enum AttendanceMonthStatus {
+  OPEN
+  CLOSED
+}
+
+
+
+model Attendance {
+  id String @id @default(cuid())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  monthId String
+  month   AttendanceMonth @relation(fields: [monthId], references: [id], onDelete: Cascade)
+
+  date DateTime // ex: 2025-01-12
+
+  status AttendanceStatus
+
+  // Heures réellement travaillées
+  startTime String?
+  endTime   String?
+
+  workedHours Float? // calculé ou manuel
+
+  // Écarts par rapport au planning
+  lateMinutes     Int? // Minutes de retard (si arrivé après l'heure prévue)
+  overtimeMinutes Int? // Minutes supplémentaires/manquantes (peut être négatif)
+
+  // Exceptions
+  isException Boolean @default(false)
+  exceptionReason String? // "Jour OFF travaillé", "Renfort service", etc.
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([status])
+}
+enum AttendanceStatus {
+  PRESENT      // Présent
+  ABSENT       // Absent non justifié
+  REST_DAY     // Jour de repos (selon planning)
+  LEAVE        // Congé planifié
+  SICK         // Maladie
+  REMOTE       // Télétravail
+  TRAINING     // Formation
+  OTHER        // Autre (avec justification)
+}
+
+// Périodes d'absence planifiées (congés, maladie longue durée, etc.)
+model LeavePeriod {
+  id String @id @default(cuid())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Période
+  startDate DateTime // Date de début (≥ aujourd'hui à la création)
+  endDate   DateTime // Date de fin
+
+  // Motif
+  leaveType LeaveType
+  reason    String? // Raison détaillée (optionnel)
+
+  // Validation
+  status LeaveStatus @default(PENDING)
+
+  approvedBy String? // ID de l'admin qui a approuvé
+  approvedAt DateTime?
+
+  notes String? // Notes internes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+enum LeaveType {
+  ANNUAL_LEAVE    // Congés annuels
+  SICK_LEAVE      // Arrêt maladie
+  MATERNITY_LEAVE // Congé maternité
+  PATERNITY_LEAVE // Congé paternité
+  UNPAID_LEAVE    // Congé sans solde
+  REMOTE_WORK     // Télétravail planifié
+  TRAINING        // Formation
+  OTHER           // Autre
+}
+
+enum LeaveStatus {
+  PENDING   // En attente
+  APPROVED  // Approuvé
+  REJECTED  // Refusé
+  CANCELLED // Annulé
+}
+

@@ -14,6 +14,7 @@ import { MyOrdersModal } from "@/components/MyOrdersModal"
 import { ImageCarousel } from "@/components/ImageCarousel"
 import { ImageThumbnails } from "@/components/ImageThumbnails"
 import { getOrdersFromLocalStorage } from "@/lib/orderStorage"
+import { toast } from "sonner"
 
 interface PageProps {
   params: Promise<{
@@ -57,9 +58,16 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
     return () => clearInterval(interval)
   }, [])
 
-  const filteredProducts = selectedCategory && data
+  const filteredProducts = (selectedCategory && data
     ? data.products.filter(product => product.categoryId === selectedCategory)
     : data?.products || []
+  ).filter(product => {
+    // Cacher les produits quantifiables avec stock insuffisant côté client
+    if (product.isQuantifiable && (product.quantity ?? 0) <= 0) {
+      return false
+    }
+    return true
+  })
 
   if (isLoading) {
     return (
@@ -217,7 +225,7 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
 
                     <div className="flex flex-col items-start justify-between mt-auto pt-4 border-gray-400 border-t gap-2">
                       <span className="text-base font-semibold text-primary">
-                        {product.price.toFixed(2)} FCFA
+                        {product.price % 1 === 0 ? product.price : product.price.toFixed(2)} FCFA
                       </span>
 
                       {!inCart ? (
@@ -253,7 +261,15 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
                           <Button
                             size="icon"
                             className="h-9 w-9 rounded-full bg-emerald-700 hover:bg-emerald-600"
-                            onClick={() => updateQuantity(product.id, quantity + 1)}
+                            onClick={() => {
+                              // Bloquer si quantité demandée dépasse le stock disponible
+                              if (product.isQuantifiable && (product.quantity ?? 0) < quantity + 1) {
+                                toast.error("Désolé, quantité demandée indisponible")
+                                return
+                              }
+                              updateQuantity(product.id, quantity + 1)
+                            }}
+                            disabled={product.isQuantifiable && (product.quantity ?? 0) <= quantity}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -310,7 +326,7 @@ function RestaurantMenuContent({ slug }: { slug: string }) {
             </div>
             <div className="flex flex-col items-start">
               <span className="text-sm font-normal opacity-90">Voir le panier</span>
-              <span className="text-base font-bold">{totalPrice.toFixed(2)} FCFA</span>
+              <span className="text-base font-bold">{totalPrice % 1 === 0 ? totalPrice : totalPrice.toFixed(2)} FCFA</span>
             </div>
           </Button>
         </div>

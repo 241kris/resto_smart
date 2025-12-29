@@ -10,6 +10,10 @@ import ProductsPage from "@/components/ProductsPage"
 import CategoriesPage from "@/components/CategoriesPage"
 import TablesPage from "@/components/TablesPage"
 import OrdersPage from "@/components/OrdersPage"
+import RestockHistoryPage from "@/components/RestockHistoryPage"
+import EmployeesPage from "@/components/EmployeesPage"
+import SchedulesPage from "@/components/SchedulesPage"
+import AttendancePage from "@/components/AttendancePage"
 import EstablishmentPage from "@/components/EstablishmentPage"
 import AuthPage from "@/components/AuthPage"
 
@@ -19,6 +23,10 @@ const menuItems = [
   { id: "categories", label: "Catégories" },
   { id: "tables", label: "Tables" },
   { id: "orders", label: "Commandes" },
+  { id: "restock-history", label: "Historique Stock" },
+  { id: "employees", label: "Employés" },
+  { id: "schedules", label: "Plannings" },
+  { id: "attendance", label: "Pointages" },
   { id: "establishment", label: "Établissement" },
 ]
 
@@ -45,6 +53,14 @@ export default function Home() {
         return <TablesPage />
       case "orders":
         return <OrdersPage />
+      case "restock-history":
+        return <RestockHistoryPage />
+      case "employees":
+        return <EmployeesPage />
+      case "schedules":
+        return <SchedulesPage />
+      case "attendance":
+        return <AttendancePage />
       case "establishment":
         return <EstablishmentPage />
       default:

@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, description, price, categoryId, image } = body
+    const { name, description, price, categoryId, image, isQuantifiable, quantity } = body
 
     // Validation
     if (!name || name.trim() === '') {
@@ -124,6 +124,14 @@ export async function POST(request: Request) {
     if (price === undefined || price === null || price < 0) {
       return NextResponse.json(
         { error: 'Le prix doit être un nombre positif' },
+        { status: 400 }
+      )
+    }
+
+    // Validation de la gestion des stocks
+    if (isQuantifiable && quantity !== undefined && quantity < 0) {
+      return NextResponse.json(
+        { error: 'La quantité ne peut pas être négative' },
         { status: 400 }
       )
     }
@@ -208,24 +216,41 @@ export async function POST(request: Request) {
       }
     }
 
-    // Créer le produit
-    const product = await prisma.product.create({
-      data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        price: parseFloat(price),
-        categoryId: categoryId || null,
-        image: imageUrl,
-        establishmentId: user.establishment.id
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true
+    // Créer le produit avec transaction pour gérer l'historique de ravitaillement
+    const product = await prisma.$transaction(async (tx) => {
+      // 1. Créer le produit
+      const newProduct = await tx.product.create({
+        data: {
+          name: name.trim(),
+          description: description?.trim() || null,
+          price: parseFloat(price),
+          categoryId: categoryId || null,
+          image: imageUrl,
+          establishmentId: user.establishment!.id,
+          isQuantifiable: isQuantifiable || false,
+          quantity: isQuantifiable && quantity !== undefined ? parseInt(quantity) : null
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         }
+      })
+
+      // 2. Si le produit est quantifiable et qu'une quantité est fournie, créer l'historique
+      if (isQuantifiable && quantity !== undefined && quantity > 0) {
+        await tx.restockHistory.create({
+          data: {
+            productId: newProduct.id,
+            quantity: parseInt(quantity)
+          }
+        })
       }
+
+      return newProduct
     })
 
     return NextResponse.json(

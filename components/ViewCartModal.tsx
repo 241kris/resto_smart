@@ -196,7 +196,7 @@ export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold">{item.name}</h4>
                     <p className="text-sm text-emerald-700 font-medium mt-1">
-                      {item.price.toFixed(2)} FCFA
+                      {item.price % 1 === 0 ? item.price : item.price.toFixed(2)} FCFA
                     </p>
 
                     {/* Contrôles de quantité */}
@@ -232,7 +232,7 @@ export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <p className="font-semibold text-sm">
-                      {(item.price * item.quantity).toFixed(2)} FCFA
+                      {(item.price * item.quantity) % 1 === 0 ? (item.price * item.quantity) : (item.price * item.quantity).toFixed(2)} FCFA
                     </p>
                   </div>
                 </div>
@@ -247,7 +247,7 @@ export function ViewCartModal({ open, onOpenChange, restaurantId, restaurantName
             <div className="flex items-center justify-between w-full">
               <span className="text-lg font-semibold">Total</span>
               <span className="text-base text-primary bg-emerald-700 px-3 text-gray-100 rounded-3xl">
-                {totalPrice.toFixed(2)} FCFA
+                {totalPrice % 1 === 0 ? totalPrice : totalPrice.toFixed(2)} FCFA
               </span>
             </div>
             <Button
