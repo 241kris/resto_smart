@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const establishmentId = user.establishment.id
+
     const body = await request.json()
     const { name, days, employeeIds = [] } = body
 
@@ -92,7 +94,8 @@ export async function POST(request: NextRequest) {
       const schedule = await tx.employeeSchedule.create({
         data: {
           name: name.trim(),
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          establishmentId
         }
       })
 

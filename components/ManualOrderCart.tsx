@@ -1,311 +1,204 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingCart, Minus, Plus, Trash2, X, Check } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import {   Trash2,  Check, ArrowLeft, RotateCcw } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+ 
 import { useManualOrderCart } from "@/contexts/ManualOrderCartContext"
-import { useCreateManualOrder } from "@/lib/hooks/useOrders"
 import { useTables } from "@/lib/hooks/useTables"
+import { useOfflineSync } from "@/lib/hooks/useOfflineSync"
+import { SyncProgressModal } from "@/components/SyncProgressModal"
 import { toast } from "sonner"
 import Image from "next/image"
 
-interface ManualOrderCartProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  restaurantId: string
-}
+export default function ManualOrderCart({ restaurantId, onBack }: { restaurantId: string; onBack: () => void }) {
+  const { items, updateQuantity, removeFromCart, clearCart, totalItems, totalAmount } = useManualOrderCart()
+  const [selectedTableId, setSelectedTableId] = useState<string | undefined>("none")
+  const [status, setStatus] = useState<'completed' | 'PAID'>('PAID')
+  const [amountGiven, setAmountGiven] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-export default function ManualOrderCart({
-  open,
-  onOpenChange,
-  restaurantId,
-}: ManualOrderCartProps) {
-  const {
-    items,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    totalItems,
-    totalAmount,
-  } = useManualOrderCart()
-
-  const [selectedTableId, setSelectedTableId] = useState<string | undefined>(undefined)
-  const [status, setStatus] = useState<'completed' | 'PAID'>('completed')
-
-  const createOrderMutation = useCreateManualOrder()
+  const { saveOrder, isSyncing, syncProgress, unsyncedCount } = useOfflineSync()
   const { data: tablesData } = useTables(restaurantId)
   const tables = tablesData?.tables || []
 
-  const handleSubmit = async () => {
-    if (items.length === 0) {
-      toast.error("Le panier est vide")
-      return
-    }
+  const changeToReturn = amountGiven !== "" ? parseFloat(amountGiven) - totalAmount : 0
 
+  const handleKeypadPress = (value: string) => {
+    if (value === 'C') setAmountGiven("")
+    else if (value === 'backspace') setAmountGiven(prev => prev.slice(0, -1))
+    else {
+      if (value === '.' && amountGiven.includes('.')) return
+      setAmountGiven(prev => prev + value)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (items.length === 0) return toast.error("Le panier est vide")
+
+    setIsSubmitting(true)
     try {
-      await createOrderMutation.mutateAsync({
+      await saveOrder({
+        restaurantId,
+        tableId: selectedTableId === 'none' ? undefined : selectedTableId,
+        totalAmount,
+        status,
         items: items.map(item => ({
           productId: item.product.id,
+          productName: item.product.name,
+          productPrice: item.product.price,
           quantity: item.quantity,
           price: item.product.price,
-        })),
-        tableId: selectedTableId === 'none' ? undefined : selectedTableId,
-        status,
+          total: item.product.price * item.quantity
+        }))
       })
 
-      toast.success('Commande créée avec succès')
-      clearCart()
-      setSelectedTableId(undefined)
-      setStatus('completed')
-      onOpenChange(false)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de la commande')
+      // Clear cart without restoring stock (order confirmed, stock already deducted)
+      await clearCart(false)
+      onBack()
+    } catch (e) {
+      console.error('Order submission error:', e)
+      toast.error("Erreur lors de l'enregistrement")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Panier de commande
-            {totalItems > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {totalItems} {totalItems > 1 ? 'articles' : 'article'}
-              </Badge>
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            Ajustez votre commande et validez
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+      {/* HEADER FIXE */}
+      <header className="h-14 shrink-0 border-b flex items-center justify-between px-4 md:px-6 bg-card z-20">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-5 w-5" /></Button>
+          <h2 className="text-sm md:text-lg font-bold truncate">Caisse</h2>
+          <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none">{totalItems}</Badge>
+        </div>
+        <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => clearCart()}>
+          <RotateCcw className="h-3.5 w-3.5 mr-1" /> Vider
+        </Button>
+      </header>
 
-        <div className="flex-1 px-6 py-4 overflow-hidden">
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">Votre panier est vide</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ajoutez des produits pour créer une commande
-              </p>
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* ZONE GAUCHE : TABLEAU (SCROLLABLE) */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-muted/5">
+          <ScrollArea className="flex-1 px-2 md:px-4">
+            <Table>
+              <TableHeader className="bg-background/95 backdrop-blur sticky top-0 z-10 shadow-sm">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[50px] md:w-[80px]">Item</TableHead>
+                  <TableHead>Désignation</TableHead>
+                  <TableHead className="text-center">Qté</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="w-[40px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.product.id} className="text-xs md:text-sm">
+                    <TableCell className="p-2">
+                      <div className="relative h-10 w-10 md:h-12 md:w-12 rounded border bg-muted shrink-0">
+                        <Image
+                          src={(item.product as any).cachedImage || item.product.image || "/default.svg"}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          unoptimized={(item.product as any).cachedImage?.startsWith('data:')}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[100px] md:max-w-none">
+                      <p className="truncate">{item.product.name}</p>
+                      <span className="text-[10px] text-muted-foreground">{item.product.price.toLocaleString()} FCFA</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1 md:gap-2">
+                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>-</Button>
+                        <span className="font-bold min-w-[20px] text-center">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, item.quantity + 1)}>+</Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      {(item.product.price * item.quantity).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="p-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeFromCart(item.product.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {/* Espace pour éviter que le bouton flottant cache le dernier item sur mobile */}
+            <div className="h-32 lg:hidden" />
+          </ScrollArea>
+        </div>
+
+        {/* SECTION DROITE : PAIEMENT (FIXE) */}
+        <aside className="w-full lg:w-[360px] border-t lg:border-t-0 lg:border-l bg-card flex flex-col z-10">
+          <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto max-h-[40vh] lg:max-h-none">
+         
+
+            {/* MONITORING PRIX */}
+            <div className="bg-slate-900 rounded-xl p-3 md:p-4 text-white">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold">Total</span>
+                <span className="text-xl font-black tracking-tight">{totalAmount.toLocaleString()} FCFA</span>
+              </div>
+              <div className="flex justify-between items-center text-emerald-400 font-mono text-sm border-t border-slate-800 pt-2">
+                <span className="text-[10px] text-slate-400 uppercase">Reçu:</span>
+                <span>{amountGiven || "0"}</span>
+              </div>
+              <div className="flex justify-between items-center mt-1 font-bold text-sm">
+                <span className="text-[10px] text-slate-400 uppercase">{changeToReturn >= 0 ? "Rendre:" : "Reste:"}</span>
+                <span className={changeToReturn >= 0 ? "text-white" : "text-orange-400"}>
+                  {Math.abs(changeToReturn).toLocaleString()}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-6 h-full">
-              {/* Liste des produits - Scrollable avec ScrollArea */}
-              <div className="flex-1">
-                <ScrollArea className="h-[400px] lg:h-[500px]">
-                  <div className="space-y-3 pr-4">
-                    {items.map((item) => (
-                      <div
-                        key={item.product.id}
-                        className="flex gap-3 p-3 rounded-lg bg-muted/50 border"
-                      >
-                      {/* Image du produit */}
-                      <div className="relative w-10 h-10 shrink-0  rounded-md overflow-hidden bg-background">
-                        {item.product.image ? (
-                          item.product.image.startsWith('data:') || item.product.image.startsWith('/') ? (
-                            <Image
-                              src={item.product.image}
-                              alt={item.product.name}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <img
-                              src={item.product.image}
-                              alt={item.product.name}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                              crossOrigin="anonymous"
-                            />
-                          )
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Info produit */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{item.product.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.product.price % 1 === 0 ? item.product.price : item.product.price.toFixed(2)} FCFA
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={() => removeFromCart(item.product.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-
-                        {/* Contrôles quantité */}
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-5 w-5"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="text-sm font-medium w-8 text-center">
-                              {item.quantity}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-5 w-5"
-                              onClick={() => {
-                                // Vérifier le stock disponible
-                                if (item.product.isQuantifiable && (item.product.quantity ?? 0) < item.quantity + 1) {
-                                  toast.error("Quantité demandée indisponible")
-                                  return
-                                }
-                                updateQuantity(item.product.id, item.quantity + 1)
-                              }}
-                              disabled={item.product.isQuantifiable && (item.product.quantity ?? 0) <= item.quantity}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                            <span className="ml-auto text-sm font-bold text-primary">
-                              {(item.product.price * item.quantity) % 1 === 0 ? (item.product.price * item.quantity) : (item.product.price * item.quantity).toFixed(2)} FCFA
-                            </span>
-                          </div>
-                          {item.product.isQuantifiable && (item.product.quantity ?? 0) <= item.quantity && (
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              Stock disponible: {item.product.quantity ?? 0} unité(s)
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Espaceur pour voir le dernier produit */}
-                  <div className="mt-25"></div>
-                </div>
-              </ScrollArea>
-              </div>
-
-              {/* Options de commande - Sidebar responsive */}
-              <div className="lg:w-80 shrink-0 space-y-4 lg:pl-6 lg:border-l">
-                  <h3 className="font-semibold mb-4">Options</h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="table">Table (optionnel)</Label>
-                      <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                        <SelectTrigger id="table">
-                          <SelectValue placeholder="Aucune table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Aucune table</SelectItem>
-                          {tables.map((table) => (
-                            <SelectItem key={table.id} value={table.id}>
-                              Table {table.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Statut</Label>
-                      <Select value={status} onValueChange={(value) => setStatus(value as 'completed' | 'PAID')}>
-                        <SelectTrigger id="status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="completed">Traité</SelectItem>
-                          <SelectItem value="PAID">Payé</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        {status === 'completed'
-                          ? 'Commande traitée'
-                          : 'Commande payée'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="mt-6 pt-4 border-t">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Articles</span>
-                      <span className="font-semibold">{totalItems}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Total</span>
-                      <span className="text-lg font-bold text-primary">
-                        {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(2)} FCFA
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* CLAVIER COMPACT */}
+            <div className="hidden lg:grid grid-cols-3 gap-1.5 mt-auto">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '.'].map((key) => (
+                <Button
+                  key={key}
+                  variant="outline"
+                  onClick={() => handleKeypadPress(key)}
+                  className={`h-10 text-md font-bold ${key === 'C' ? 'text-destructive' : ''}`}
+                >
+                  {key}
+                </Button>
+              ))}
+            </div>
           </div>
 
-        {items.length > 0 && (
-          <DialogFooter className="px-6 py-4 border-t flex-col gap-3 sm:flex-col">
-            <div className="flex flex-col sm:flex-row gap-2 w-full">
-              <Button
-                variant="outline"
-                onClick={() => clearCart()}
-                className="flex-1"
-                disabled={createOrderMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Vider le panier
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={createOrderMutation.isPending}
-                className="flex-1 gap-2"
-              >
-                {createOrderMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                    Création...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Valider la commande
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+          {/* BOUTON VALIDER (FLOTTANT SUR MOBILE, FIXE SUR DESKTOP) */}
+          <div className="fixed lg:relative bottom-4 left-4 right-4 lg:bottom-0 lg:left-0 lg:right-0 lg:p-4 bg-transparent lg:bg-background lg:border-t">
+            <Button
+              className="w-full h-14 lg:h-12 text-sm font-bold uppercase shadow-2xl lg:shadow-none bg-primary hover:bg-primary/90"
+              onClick={handleSubmit}
+              disabled={isSubmitting || items.length === 0}
+            >
+              {isSubmitting ? "Enregistrement..." : `Valider (${totalAmount.toLocaleString()})`}
+              <Check className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </aside>
+      </main>
+
+      {/* Sync Progress Modal */}
+      <SyncProgressModal
+        open={isSyncing}
+        onOpenChange={() => { }}
+        progress={syncProgress}
+        unsyncedCount={unsyncedCount}
+        isComplete={!isSyncing && syncProgress === 100}
+      />
+    </div>
   )
 }

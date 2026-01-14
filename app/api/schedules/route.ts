@@ -37,17 +37,23 @@ export async function GET() {
         { status: 404 }
       )
     }
+    const establishmentId = user.establishment.id
 
     // Récupérer tous les plannings avec leurs jours et assignations
     const schedules = await prisma.employeeSchedule.findMany({
       where: {
-        employeeAssignments: {
-          some: {
-            employee: {
-              establishmentId: user.establishment.id
+        OR: [
+          { establishmentId },
+          {
+            employeeAssignments: {
+              some: {
+                employee: {
+                  establishmentId: user.establishment.id
+                }
+              }
             }
           }
-        }
+        ]
       },
       include: {
         days: {

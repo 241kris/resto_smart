@@ -1,33 +1,38 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, Clock, Users, Trash2, Eye, AlertCircle, Plus } from "lucide-react"
+import { Calendar, Clock, Users, Trash2, Eye, AlertCircle, Plus, Check } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import ScheduleDetailsPage from "@/components/ScheduleDetailsPage"
-import CreateScheduleDrawer from "@/components/CreateScheduleDrawer"
+import CreateScheduleFlow from "@/components/CreateScheduleFlow"
 import { useSchedules, useDeleteSchedule, type Schedule } from "@/lib/hooks/useSchedules"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export default function SchedulesPage() {
   const { data, isLoading, error } = useSchedules()
   const deleteMutation = useDeleteSchedule()
+  const queryClient = useQueryClient()
 
-  const [viewMode, setViewMode] = useState<'list' | 'details'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'create'>('list')
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
   const [deletingSchedule, setDeletingSchedule] = useState<Schedule | null>(null)
-  const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
 
   const schedules = data?.schedules || []
 
-  const filteredSchedules = schedules.filter(schedule =>
-    schedule.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredSchedules = schedules.filter(schedule => {
+    const matchesSearch = schedule.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'ALL' || schedule.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
 
   const handleShowDetails = (schedule: Schedule) => {
     setSelectedSchedule(schedule)
@@ -49,6 +54,19 @@ export default function SchedulesPage() {
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la suppression')
     }
+  }
+
+  // Afficher la création si en mode create
+  if (viewMode === 'create') {
+    return (
+      <CreateScheduleFlow
+        onBack={handleBackToList}
+        onSuccess={() => {
+          handleBackToList()
+          queryClient.invalidateQueries({ queryKey: ['schedules'] })
+        }}
+      />
+    )
   }
 
   // Afficher la page de détails si en mode details
@@ -93,48 +111,53 @@ export default function SchedulesPage() {
             Gérez tous les plannings de travail de votre établissement
           </p>
         </div>
-        <Button onClick={() => setCreateDrawerOpen(true)}>
+        <Button onClick={() => setViewMode('create')}>
           <Plus className="h-4 w-4 mr-2" />
           Créer un planning
         </Button>
       </div>
 
-      {/* Barre de recherche */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Rechercher un planning..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
-        </div>
-      </div>
 
-      {/* Statistiques */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total plannings</CardDescription>
-            <CardTitle className="text-3xl">{schedules.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Plannings actifs</CardDescription>
-            <CardTitle className="text-3xl text-green-600">
+
+      {/* Statistiques en liste */}
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-4 py-4 px-6 bg-muted/30 rounded-2xl border border-muted/50">
+        <div className="flex items-center gap-3">
+          <div className="h-6 w-6  rounded-full bg-primary/10 flex items-center justify-center">
+            <Calendar className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Plannings</p>
+            <p className="text-sm font-bold">{schedules.length}</p>
+          </div>
+        </div>
+
+        <div className="h-8 w-px bg-muted hidden md:block" />
+
+        <div className="flex items-center gap-3">
+          <div className="h-6 w-6 rounded-full bg-green-500/10 flex items-center justify-center">
+            <Check className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Actifs</p>
+            <p className="text-sm font-bold text-green-600">
               {schedules.filter(s => s.status === 'ACTIVE').length}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Employés assignés</CardDescription>
-            <CardTitle className="text-3xl">
+            </p>
+          </div>
+        </div>
+
+        <div className="h-8 w-px bg-muted hidden md:block" />
+
+        <div className="flex items-center gap-3">
+          <div className="h-6 w-6  rounded-full bg-blue-500/10 flex items-center justify-center">
+            <Users className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Employés</p>
+            <p className="text-sm font-bold">
               {schedules.reduce((acc, s) => acc + s.employeeAssignments.length, 0)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Liste des plannings */}
@@ -160,34 +183,36 @@ export default function SchedulesPage() {
             }, 0)
 
             return (
-              <Card key={schedule.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+              <Card key={schedule.id} className="group overflow-hidden border-2 border-muted hover:border-primary/30 hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{schedule.name}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={schedule.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                          {schedule.status === 'ACTIVE' ? 'Actif' : 'Inactif'}
-                        </Badge>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={cn(
+                          "h-2 w-2 rounded-full",
+                          schedule.status === 'ACTIVE' ? "bg-green-500 animate-pulse" : "bg-muted-foreground"
+                        )} />
+                        <span className="text-sm   font-semibold tracking-widest text-muted-foreground">
+                          {schedule.status === 'ACTIVE' ? 'Travail en cours' : 'Hors service'}
+                        </span>
                       </div>
+                      <CardTitle className="text-sm group-hover:text-primary transition-colors">{schedule.name}</CardTitle>
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   {/* Statistiques du planning */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{workingDaysCount} jour{workingDaysCount > 1 ? 's' : ''} de travail</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/50 p-3 rounded-xl border border-muted flex flex-col items-center justify-center text-center">
+                      <Calendar className="h-4 w-4 mb-1 text-primary" />
+                      <span className="text-xs font-bold">{workingDaysCount}</span>
+                      <span className="text-[10px] text-muted-foreground">Jours/Sem</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>{totalHours.toFixed(1)}h/semaine</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{schedule.employeeAssignments.length} employé{schedule.employeeAssignments.length > 1 ? 's' : ''}</span>
+                    <div className="bg-muted/50 p-3 rounded-xl border border-muted flex flex-col items-center justify-center text-center">
+                      <Clock className="h-4 w-4 mb-1 text-blue-500" />
+                      <span className="text-xs font-bold">{totalHours.toFixed(1)}h</span>
+                      <span className="text-[10px] text-muted-foreground">Total/Heures</span>
                     </div>
                   </div>
 
@@ -225,7 +250,7 @@ export default function SchedulesPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+
                       onClick={() => handleShowDetails(schedule)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -258,11 +283,6 @@ export default function SchedulesPage() {
         variant="destructive"
       />
 
-      {/* Drawer de création de planning */}
-      <CreateScheduleDrawer
-        open={createDrawerOpen}
-        onOpenChange={setCreateDrawerOpen}
-      />
     </div>
   )
 }

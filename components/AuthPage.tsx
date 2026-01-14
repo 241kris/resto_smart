@@ -22,7 +22,7 @@ export default function AuthPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    setError("") // Réinitialiser l'erreur lors de la saisie
+    setError("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,30 +32,24 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        // Connexion
         const result = await login(formData.email, formData.password)
-        if (!result.success) {
-          setError(result.error || "Erreur de connexion")
-        }
+        if (!result.success) setError(result.error || "Erreur de connexion")
       } else {
-        // Inscription
         if (formData.password.length < 5) {
           setError("Le mot de passe doit contenir au moins 5 caractères")
           setIsLoading(false)
           return
         }
         if (formData.password !== formData.confirmPassword) {
-          setError("Les mots de passe ne correspondent pas desole")
+          setError("Les mots de passe ne correspondent pas")
           setIsLoading(false)
           return
         }
         const result = await register(formData.email, formData.password)
-        if (!result.success) {
-          setError(result.error || "Erreur d'inscription")
-        }
+        if (!result.success) setError(result.error || "Erreur d'inscription")
       }
     } catch (err) {
-      setError("Une erreur est survenue. Veuillez réessayer.")
+      setError("Une erreur est survenue.")
     } finally {
       setIsLoading(false)
     }
@@ -68,22 +62,36 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(var(--primary))]/10 via-[hsl(var(--background))] to-[hsl(var(--primary))]/5 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="relative w-24 h-24">
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
+      
+      {/* LOGO EN ARRIÈRE-PLAN (FULL PAGE) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] sm:opacity-[0.05]">
+        <div className="relative w-[100%] h-[100%] ">
+          <Image
+            src="/logo.png"
+            alt=""
+            fill
+            className="object-contain "
+            priority
+          />
+        </div>
+      </div>
+
+      {/* FORMULAIRE D'AUTHENTIFICATION */}
+      <div className="relative z-10 w-full max-w-md px-4">
+        {/* Petit logo au-dessus de la carte pour le rappel de marque */}
+        <div className="flex justify-center mb-6">
+          <div className="relative w-16 h-16 drop-shadow-sm">
             <Image
               src="/logo.png"
-              alt="RestoSmart Logo"
+              alt="RestoSmart"
               fill
               className="object-contain"
             />
           </div>
         </div>
 
-        {/* Auth Card */}
-        <Card className="shadow-xl">
+        <Card className="shadow-2xl border-muted/50 backdrop-blur-sm bg-background/80">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               {isLogin ? "Connexion" : "Inscription"}
@@ -96,95 +104,89 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Message d'erreur */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   <p className="text-sm">{error}</p>
                 </div>
               )}
 
-              {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                  Adresse e-mail
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="votre.email@exemple.fr"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                  Mot de passe
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={5}
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Confirm Password Field (only for registration) */}
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                    Confirmer le mot de passe
-                  </Label>
+                <Label htmlFor="email">Adresse e-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                    placeholder="••••••••"
+                    id="email"
+                    type="email"
+                    className="pl-10"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="nom@exemple.com"
                     required
-                    minLength={5}
                     disabled={isLoading}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    className="pl-10"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              {!isLogin && (
+                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                  <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      className="pl-10"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
               )}
 
-              {/* Submit Button */}
-              <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold transition-all active:scale-[0.98]" disabled={isLoading}>
                 {isLoading ? "Chargement..." : (isLogin ? "Se connecter" : "S'inscrire")}
-                <ArrowRight className="h-4 w-4" />
+                {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
 
-            {/* Toggle Mode */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                {isLogin ? "Vous n'avez pas de compte ?" : "Vous avez déjà un compte ?"}
+            <div className="mt-8 pt-6 border-t text-center">
+              <p className="text-sm text-muted-foreground">
+                {isLogin ? "Nouveau sur RestoSmart ?" : "Déjà un compte ?"}
               </p>
               <Button
                 variant="link"
                 onClick={toggleMode}
-                className="text-[hsl(var(--primary))] font-semibold"
+                className="mt-1 font-bold text-primary underline-offset-4 hover:underline"
               >
-                {isLogin ? "Créer un compte" : "Se connecter"}
+                {isLogin ? "Créer un compte maintenant" : "Se connecter à mon compte"}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-[hsl(var(--muted-foreground))] mt-8">
-          © 2025 RestoSmart. Tous droits réservés.
+        <p className="text-center text-xs text-muted-foreground mt-8 uppercase tracking-widest opacity-60">
+          © 2026 RestoSmart • Système de Gestion
         </p>
       </div>
     </div>

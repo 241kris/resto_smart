@@ -10,6 +10,8 @@ import {
   GraduationCap,
   MoreHorizontal,
   Plus,
+  AlertCircle,
+  Clock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -104,59 +106,67 @@ export default function EmployeeAttendanceCard({
   const statusInfo = todayAttendance ? getStatusIcon(todayAttendance.status) : null
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+    <Card className="rounded-[1.5rem] border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
-              <AvatarImage src={employee.avatar || undefined} />
-              <AvatarFallback>
-                {employee.firstName[0]}{employee.lastName[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0 overflow-hidden">
+              {employee.avatar ? (
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={employee.avatar} />
+                  <AvatarFallback className="rounded-2xl">
+                    {employee.firstName[0]}{employee.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-lg font-bold text-slate-400">
+                  {employee.firstName[0]}{employee.lastName[0]}
+                </div>
+              )}
+            </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base md:text-lg truncate">
+              <h3 className="font-bold text-slate-900 dark:text-white truncate">
                 {employee.firstName} {employee.lastName}
-              </CardTitle>
-              <CardDescription className="text-xs md:text-sm truncate">
+              </h3>
+              <p className="text-primary font-bold text-[10px] uppercase tracking-wider">
                 {getPositionLabel(employee.position)}
-              </CardDescription>
+              </p>
             </div>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full flex-shrink-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="rounded-xl dark:bg-slate-900 dark:border-slate-800">
+              <DropdownMenuLabel className="font-bold">Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onOpenLeavePeriodDrawer(employee)}>
+              <DropdownMenuItem onClick={() => onOpenLeavePeriodDrawer(employee)} className="rounded-lg">
                 <Plane className="h-4 w-4 mr-2" />
                 Gérer les absences
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-3">
         {/* Statut du jour */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between text-xs md:text-sm">
-            <span className="text-muted-foreground font-medium">Aujourd'hui</span>
+        <div className="space-y-3 pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">Aujourd'hui</span>
             {todayAttendance && statusInfo && (
-              <div className="flex items-center gap-1.5">
-                <statusInfo.icon className={`h-4 w-4 ${statusInfo.color}`} />
-                <span className={`font-medium ${statusInfo.color}`}>
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-lg ${statusInfo.bgColor}`}>
+                  <statusInfo.icon className={`h-3.5 w-3.5 ${statusInfo.color}`} />
+                </div>
+                <span className={`font-bold text-sm ${statusInfo.color}`}>
                   {getStatusLabel(todayAttendance.status)}
                 </span>
                 {todayAttendance.workedHours && (
-                  <span className="text-muted-foreground">
-                    ({decimalToHHMM(todayAttendance.workedHours)})
-                  </span>
+                  <Badge variant="secondary" className="rounded-lg text-[10px] font-bold">
+                    {decimalToHHMM(todayAttendance.workedHours)}
+                  </Badge>
                 )}
               </div>
             )}
@@ -164,35 +174,41 @@ export default function EmployeeAttendanceCard({
 
           {/* Période d'absence en cours */}
           {currentLeavePeriod ? (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Button
                 size="sm"
                 disabled
-                className="w-full"
+                className="w-full h-11 rounded-xl font-bold"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Pointer
               </Button>
-              <p className="text-xs text-orange-600 dark:text-orange-400 text-center">
-                Période d'absence: {currentLeavePeriod.leaveType}
-              </p>
+              <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                <Plane className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">
+                  Période d'absence en cours
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Button
                 size="sm"
                 onClick={() => onOpenAttendanceDrawer(employee)}
                 disabled={!isMonthOpen}
-                className="w-full"
+                className="w-full h-11 rounded-xl font-bold shadow-lg"
                 variant={todayAttendance ? "outline" : "default"}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {todayAttendance ? "Modifier" : "Pointer"}
+                {todayAttendance ? "Modifier le pointage" : "Pointer maintenant"}
               </Button>
               {isRestDayInSchedule && !currentLeavePeriod && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
-                  Jour de repos selon planning
-                </p>
+                <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                  <Coffee className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                    Jour de repos selon planning
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -200,41 +216,49 @@ export default function EmployeeAttendanceCard({
 
         {/* Statistiques du mois */}
         {stats && (
-          <div className="space-y-2 pt-2 border-t">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Présences</span>
-                <span className="text-base md:text-lg font-semibold text-green-600">
+          <div className="space-y-3">
+            <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">Statistiques du mois</span>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                   {stats.daysPresent}
                 </span>
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Présences</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Absences</span>
-                <span className="text-base md:text-lg font-semibold text-red-600">
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10">
+                <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
                   {stats.daysAbsent}
                 </span>
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Absences</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Heures</span>
-                <span className="text-base md:text-lg font-semibold">
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
                   {decimalToHHMM(stats.totalWorkedHours)}
                 </span>
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Heures</span>
               </div>
             </div>
 
             {/* Retard et heures sup */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col bg-orange-50 dark:bg-orange-900/10 rounded-lg p-2">
-                <span className="text-xs text-muted-foreground">Retard total</span>
-                <span className="text-sm md:text-base font-semibold text-orange-600">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+                <div className="flex items-center gap-1 mb-1">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Retard</span>
+                </div>
+                <span className="text-lg font-black text-amber-600 dark:text-amber-400">
                   {stats.totalLateMinutes > 0 ? `${Math.floor(stats.totalLateMinutes / 60)}h${(stats.totalLateMinutes % 60).toString().padStart(2, '0')}` : '0h00'}
                 </span>
               </div>
-              <div className="flex flex-col bg-blue-50 dark:bg-blue-900/10 rounded-lg p-2">
-                <span className="text-xs text-muted-foreground">
-                  {stats.totalOvertimeMinutes >= 0 ? 'Heures sup' : 'Heures manq.'}
-                </span>
-                <span className={`text-sm md:text-base font-semibold ${stats.totalOvertimeMinutes >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
+                <div className="flex items-center gap-1 mb-1">
+                  <Clock className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    {stats.totalOvertimeMinutes >= 0 ? 'H. Sup' : 'H. Manq'}
+                  </span>
+                </div>
+                <span className={`text-lg font-black ${stats.totalOvertimeMinutes >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {Math.abs(stats.totalOvertimeMinutes) > 0
                     ? `${stats.totalOvertimeMinutes >= 0 ? '+' : '-'}${Math.floor(Math.abs(stats.totalOvertimeMinutes) / 60)}h${(Math.abs(stats.totalOvertimeMinutes) % 60).toString().padStart(2, '0')}`
                     : '0h00'}

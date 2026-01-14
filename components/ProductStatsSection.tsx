@@ -22,6 +22,8 @@ interface ProductStats {
   totalQuantity: number
   totalRevenue: number
   orderCount: number
+  isQuantifiable: boolean
+  remainingQuantity: number | null
 }
 
 interface ProductsData {
@@ -40,14 +42,19 @@ interface ProductsData {
 
 interface ProductStatsSectionProps {
   period: string
+  date?: string
 }
 
-export function ProductStatsSection({ period }: ProductStatsSectionProps) {
+export function ProductStatsSection({ period, date }: ProductStatsSectionProps) {
   // Récupérer les données des produits
   const { data, isLoading, error } = useQuery<ProductsData>({
-    queryKey: ['analytics', 'products', period],
+    queryKey: ['analytics', 'products', period, date],
     queryFn: async () => {
-      const response = await fetch(`/api/analytics/products?period=${period}`)
+      const url = new URL(`${window.location.origin}/api/analytics/products`)
+      url.searchParams.set('period', period)
+      if (date) url.searchParams.set('date', date)
+
+      const response = await fetch(url.toString())
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des données')
       }
@@ -307,10 +314,10 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                       <TableHead className="w-20">Image</TableHead>
                       <TableHead>Produit</TableHead>
                       <TableHead className="text-right">Prix</TableHead>
-                      <TableHead className="text-right">Qté Vendue</TableHead>
-                      <TableHead className="text-right">Nb Commandes</TableHead>
+                      <TableHead className="text-right">Vendus</TableHead>
+                      <TableHead className="text-right">Stock Restant</TableHead>
                       <TableHead className="text-right">Revenu Total</TableHead>
-                      <TableHead className="text-center">Statut</TableHead>
+                      <TableHead className="text-center">Type</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -351,9 +358,13 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="font-semibold">
-                            {product.orderCount}
-                          </span>
+                          {product.isQuantifiable ? (
+                            <Badge variant={(product.remainingQuantity || 0) <= 5 ? "destructive" : "secondary"}>
+                              {product.remainingQuantity} restants
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs italic">Non quantifiable</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-bold text-green-600">
@@ -361,8 +372,8 @@ export function ProductStatsSection({ period }: ProductStatsSectionProps) {
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
-                            Vendu
+                          <Badge variant="outline" className={product.isQuantifiable ? "bg-blue-50 text-blue-700" : "bg-slate-50 text-slate-700"}>
+                            {product.isQuantifiable ? "Physique" : "Service/Plat"}
                           </Badge>
                         </TableCell>
                       </TableRow>

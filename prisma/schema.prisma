@@ -51,6 +51,12 @@ model Establishment {
   employees Employee[] // Employés de l'établissement
 
   attendanceMonths AttendanceMonth[]
+  schedules        EmployeeSchedule[] // Plannings créés par l'établissement
+
+  // Relations pour le menu intelligent
+  dishesOfTheDay  DishOfTheDay[]
+  promotions      Promotion[]
+  recommendations Recommendation[]
 }
 
 model Category {
@@ -90,6 +96,11 @@ model Product {
 
   orderItems     OrderItem[]
   restockHistory RestockHistory[]
+
+  // Relations pour le menu intelligent
+  dishOfTheDay   DishOfTheDay[]
+  promotions     Promotion[]
+  recommendations Recommendation[]
 }
 
 model Table {
@@ -113,6 +124,9 @@ model Table {
 
 model Order {
   id String @id @default(cuid())
+
+  // ID local unique pour la synchro offline (anti-doublon strict)
+  localId String? @unique
 
   restaurantId String
   restaurant   Establishment @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -246,11 +260,16 @@ model EmployeeSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relation vers l'établissement
+  establishmentId String?
+  establishment   Establishment? @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
   // Relations
   days EmployeeScheduleDay[]
   employeeAssignments EmployeeScheduleAssignment[] // Plusieurs employés peuvent avoir ce planning
 
   @@index([status])
+  @@index([establishmentId])
 }
 
 // Table de jonction pour la relation many-to-many entre Employee et EmployeeSchedule
@@ -476,5 +495,149 @@ enum LeaveStatus {
   APPROVED  // Approuvé
   REJECTED  // Refusé
   CANCELLED // Annulé
+}
+
+// ---------------------------------------
+//  MENU INTELLIGENT
+// ---------------------------------------
+
+// Plats du jour - Produits mis en avant pour la journée
+model DishOfTheDay {
+  id String @id @default(cuid())
+
+  // Relation vers l'établissement
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  // Relation vers le produit
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Date du plat du jour
+  date DateTime // Date pour laquelle ce plat est mis en avant
+
+  // Ordre d'affichage
+  displayOrder Int @default(0)
+
+  // Statut
+  isActive Boolean @default(true)
+
+  // Description spéciale pour ce jour (optionnel)
+  specialDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([establishmentId, productId, date])
+  @@index([establishmentId, date])
+  @@index([date])
+  @@index([isActive])
+}
+
+// Promotions - Réductions sur des produits
+model Promotion {
+  id String @id @default(cuid())
+
+  // Relation vers l'établissement
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  // Relation vers le produit
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Nom de la promotion
+  name String // ex: "Happy Hour", "Promo Weekend", etc.
+
+  // Prix promotionnel
+  discountedPrice Float // Prix réduit (ex: 2000 au lieu de 2250)
+
+  // Pourcentage de réduction (calculé automatiquement)
+  discountPercent Float? // ex: 11.11 pour 11.11%
+
+  // Période de validité
+  startDate DateTime // Date de début de la promotion
+  endDate   DateTime // Date de fin de la promotion
+
+  // Jours de la semaine (optionnel - pour promotions récurrentes)
+  daysOfWeek Json? // Array: ["MONDAY", "FRIDAY"] pour promotions certains jours
+
+  // Heures de validité (optionnel - ex: Happy Hour)
+  startTime String? // ex: "17:00"
+  endTime   String? // ex: "20:00"
+
+  // Ordre d'affichage
+  displayOrder Int @default(0)
+
+  // Statut
+  isActive Boolean @default(true)
+
+  // Description
+  description String?
+
+  // Badge à afficher (optionnel)
+  badge String? // ex: "PROMO", "-10%", "HAPPY HOUR"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([establishmentId])
+  @@index([productId])
+  @@index([startDate, endDate])
+  @@index([isActive])
+}
+
+// Recommandations - Suggestions intelligentes
+model Recommendation {
+  id String @id @default(cuid())
+
+  // Relation vers l'établissement
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  // Relation vers le produit
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Type de recommandation
+  type RecommendationType
+
+  // Raison de la recommandation (affiché au client)
+  reason String? // ex: "Le plus commandé", "Nouveauté", "Spécialité du chef"
+
+  // Score de recommandation (pour tri)
+  score Int @default(0) // Plus le score est élevé, plus la recommandation est forte
+
+  // Ordre d'affichage
+  displayOrder Int @default(0)
+
+  // Période de validité (optionnel)
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Statut
+  isActive Boolean @default(true)
+
+  // Badge à afficher (optionnel)
+  badge String? // ex: "POPULAIRE", "NOUVEAU", "CHEF'S CHOICE"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([establishmentId])
+  @@index([productId])
+  @@index([type])
+  @@index([isActive])
+  @@index([score])
+}
+
+enum RecommendationType {
+  POPULAR         // Populaire / Le plus commandé
+  NEW             // Nouveauté
+  CHEF_CHOICE     // Choix du chef
+  TRENDING        // Tendance
+  SEASONAL        // De saison
+  BEST_RATED      // Mieux noté
+  HOUSE_SPECIAL   // Spécialité maison
 }
 

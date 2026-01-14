@@ -10,7 +10,8 @@
       "Bash(yes:*)",
       "Bash(npm run build:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: improve customer pages UX with smart button visibility and auto-refresh\n\n- Hide \"Mes Commandes\" button when no orders exist in localStorage\n- Auto-refresh order status when MyOrdersModal opens\n- Auto-refresh order status every 10 seconds while modal is open\n- Fix useCallback hook order to prevent initialization errors\n- Cart button already has conditional rendering \\(totalItems > 0\\)\n\nFiles modified:\n- app/[slug]/page.tsx: Added conditional rendering for orders button\n- app/t/[restaurantId]/table/[tableToken]/page.tsx: Added conditional rendering for orders button\n- components/MyOrdersModal.tsx: Reordered hooks and added auto-refresh functionality\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "Bash(node scripts/generate-icons.js:*)"
     ],
     "deny": [],
     "ask": []

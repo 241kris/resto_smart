@@ -15,6 +15,22 @@ export interface Product {
   category: Category | null
   isQuantifiable: boolean
   quantity: number | null
+  promotion?: {
+    id: string
+    name: string
+    discountedPrice: number
+    discountPercent: number | null
+    badge: string | null
+    description: string | null
+  } | null
+  isDishOfDay?: boolean
+  recommendation?: {
+    id: string
+    type: string
+    reason: string | null
+    badge: string | null
+    score: number
+  } | null
 }
 
 export interface Restaurant {
@@ -30,6 +46,52 @@ export interface Restaurant {
   longitude: number | null
 }
 
+export interface DishOfTheDay {
+  id: string
+  product: {
+    id: string
+    name: string
+    price: number
+    image: string | null
+    category: Category | null
+  }
+  specialDescription: string | null
+  displayOrder: number
+}
+
+export interface Promotion {
+  id: string
+  name: string
+  product: {
+    id: string
+    name: string
+    price: number
+    image: string | null
+    category: Category | null
+  }
+  discountedPrice: number
+  discountPercent: number | null
+  badge: string | null
+  description: string | null
+  displayOrder: number
+}
+
+export interface Recommendation {
+  id: string
+  type: string
+  product: {
+    id: string
+    name: string
+    price: number
+    image: string | null
+    category: Category | null
+  }
+  reason: string | null
+  badge: string | null
+  score: number
+  displayOrder: number
+}
+
 export interface RestaurantMenuResponse {
   success: boolean
   restaurant: Restaurant
@@ -37,6 +99,9 @@ export interface RestaurantMenuResponse {
   products: Product[]
   totalProducts: number
   totalCategories: number
+  dishesOfTheDay?: DishOfTheDay[]
+  promotions?: Promotion[]
+  recommendations?: Recommendation[]
 }
 
 // Hook pour récupérer le menu complet d'un restaurant par slug (route publique)

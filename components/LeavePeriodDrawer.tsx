@@ -167,24 +167,32 @@ export default function LeavePeriodDrawer({
       <DrawerContent className="max-h-[96vh]">
         <div className="mx-auto w-full max-w-2xl">
           <DrawerHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={employee.avatar || undefined} />
-                  <AvatarFallback>
-                    {employee.firstName[0]}{employee.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0 overflow-hidden">
+                  {employee.avatar ? (
+                    <Avatar className="h-full w-full">
+                      <AvatarImage src={employee.avatar} />
+                      <AvatarFallback className="rounded-2xl">
+                        {employee.firstName[0]}{employee.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-slate-400">
+                      {employee.firstName[0]}{employee.lastName[0]}
+                    </div>
+                  )}
+                </div>
                 <div>
-                  <DrawerTitle className="text-lg">Périodes d'absence</DrawerTitle>
-                  <DrawerDescription>
+                  <DrawerTitle className="text-xl font-black dark:text-white">Périodes d'absence</DrawerTitle>
+                  <DrawerDescription className="font-medium">
                     {employee.firstName} {employee.lastName} • {employee.position}
                   </DrawerDescription>
                 </div>
               </div>
               <DrawerClose asChild>
-                <Button variant="ghost" size="icon">
-                  <X className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <X className="h-5 w-5" />
                 </Button>
               </DrawerClose>
             </div>
@@ -193,31 +201,31 @@ export default function LeavePeriodDrawer({
           <div className="px-4 pb-4 space-y-4 overflow-y-auto max-h-[calc(96vh-140px)]">
             {/* Statistiques */}
             {stats && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black dark:text-white">{stats.total}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">Total</p>
                 </div>
-                <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                  <p className="text-xs text-muted-foreground">En attente</p>
+                <div className="bg-amber-50 dark:bg-amber-500/10 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-amber-600 dark:text-amber-400">{stats.pending}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">En attente</p>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-                  <p className="text-xs text-muted-foreground">Approuvées</p>
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{stats.approved}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">Approuvées</p>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-blue-600">{stats.upcoming}</p>
-                  <p className="text-xs text-muted-foreground">À venir</p>
+                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-2xl p-4 text-center">
+                  <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{stats.upcoming}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">À venir</p>
                 </div>
               </div>
             )}
 
             {/* Bouton créer et filtre */}
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className="flex-1"
+                className="flex-1 h-11 rounded-xl font-bold shadow-lg"
                 variant={showCreateForm ? "outline" : "default"}
               >
                 {showCreateForm ? (
@@ -237,29 +245,32 @@ export default function LeavePeriodDrawer({
                 value={filterStatus}
                 onValueChange={(v) => setFilterStatus(v as LeaveStatus | 'all')}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 h-11 rounded-xl font-bold">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les périodes</SelectItem>
-                  <SelectItem value="PENDING">En attente</SelectItem>
-                  <SelectItem value="APPROVED">Approuvées</SelectItem>
-                  <SelectItem value="REJECTED">Rejetées</SelectItem>
-                  <SelectItem value="CANCELLED">Annulées</SelectItem>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all" className="rounded-lg font-bold">Toutes les périodes</SelectItem>
+                  <SelectItem value="PENDING" className="rounded-lg font-bold">En attente</SelectItem>
+                  <SelectItem value="APPROVED" className="rounded-lg font-bold">Approuvées</SelectItem>
+                  <SelectItem value="REJECTED" className="rounded-lg font-bold">Rejetées</SelectItem>
+                  <SelectItem value="CANCELLED" className="rounded-lg font-bold">Annulées</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Formulaire de création */}
             {showCreateForm && (
-              <Card className="border-primary">
+              <Card className="rounded-[2rem] border-2 border-primary bg-white dark:bg-slate-900 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Nouvelle période d'absence</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg font-black flex items-center gap-2">
+                    <Plus className="h-5 w-5 text-primary" />
+                    Nouvelle période d'absence
+                  </CardTitle>
+                  <CardDescription className="font-medium">
                     Les dates doivent être à partir d'aujourd'hui
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="startDate" className="text-xs">

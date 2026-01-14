@@ -14,6 +14,8 @@ interface ProductStatCardProps {
     totalQuantity: number
     totalRevenue: number
     orderCount: number
+    isQuantifiable: boolean
+    remainingQuantity: number | null
   }
   rank?: number
 }
@@ -55,10 +57,10 @@ export function ProductStatCard({ product, rank }: ProductStatCardProps) {
 
           {/* Status */}
           <Badge
-            variant={isSold ? "default" : "secondary"}
-            className={isSold ? "bg-green-100 text-green-700 hover:bg-green-100" : "bg-gray-100 text-gray-600"}
+            variant="outline"
+            className={product.isQuantifiable ? "bg-blue-50 text-blue-700" : "bg-slate-50 text-slate-700"}
           >
-            {isSold ? "Vendu" : "Non vendu"}
+            {product.isQuantifiable ? "Physique" : "Service"}
           </Badge>
         </div>
       </CardHeader>
@@ -70,19 +72,25 @@ export function ProductStatCard({ product, rank }: ProductStatCardProps) {
           <span className="font-semibold">{product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA</span>
         </div>
 
-        {/* Quantité */}
+        {/* Quantité vendue */}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Quantité vendue</span>
+          <span className="text-muted-foreground">Vendus</span>
           <span className={isSold ? "font-semibold text-blue-600" : "text-muted-foreground"}>
             {product.totalQuantity}
           </span>
         </div>
 
-        {/* Nb commandes */}
+        {/* Stock restant */}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Nb commandes</span>
-          <span className={isSold ? "font-semibold" : "text-muted-foreground"}>
-            {product.orderCount}
+          <span className="text-muted-foreground">Stock restant</span>
+          <span>
+            {product.isQuantifiable ? (
+              <Badge variant={(product.remainingQuantity || 0) <= 5 ? "destructive" : "secondary"} className="h-6 px-2">
+                {product.remainingQuantity}
+              </Badge>
+            ) : (
+              <span className="text-xs italic text-muted-foreground">Illimité</span>
+            )}
           </span>
         </div>
 

@@ -11,6 +11,8 @@ interface ProductStats {
   totalQuantity: number
   totalRevenue: number
   orderCount: number
+  isQuantifiable: boolean
+  remainingQuantity: number | null
 }
 
 interface InventoryData {
@@ -66,14 +68,14 @@ export async function generateInventoryPDF(data: InventoryData, establishmentNam
     product.productName,
     `${product.currentPrice % 1 === 0 ? product.currentPrice : product.currentPrice.toFixed(2)} FCFA`,
     product.totalQuantity.toString(),
-    product.orderCount.toString(),
+    product.isQuantifiable ? `${product.remainingQuantity || 0}` : '-',
     `${product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA`,
-    product.totalQuantity > 0 ? 'Vendu' : 'Non vendu'
+    product.isQuantifiable ? 'Physique' : 'Service'
   ])
 
   autoTable(doc, {
     startY: 88,
-    head: [['N°', 'Produit', 'Prix unitaire', 'Qté vendue', 'Nb commandes', 'Revenu total', 'Statut']],
+    head: [['N°', 'Produit', 'Prix unit.', 'Vendus', 'Stock', 'Revenu total', 'Type']],
     body: tableData,
     theme: 'grid',
     headStyles: {
@@ -83,27 +85,16 @@ export async function generateInventoryPDF(data: InventoryData, establishmentNam
       halign: 'center'
     },
     bodyStyles: {
-      fontSize: 9
+      fontSize: 8
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'left', cellWidth: 50 },
-      2: { halign: 'right', cellWidth: 28 },
-      3: { halign: 'center', cellWidth: 22 },
-      4: { halign: 'center', cellWidth: 25 },
-      5: { halign: 'right', cellWidth: 30 },
-      6: { halign: 'center', cellWidth: 25 }
-    },
-    didParseCell: (data: any) => {
-      // Colorer les statuts
-      if (data.column.index === 6 && data.section === 'body') {
-        if (data.cell.text[0] === 'Vendu') {
-          data.cell.styles.textColor = [34, 197, 94] // Vert
-          data.cell.styles.fontStyle = 'bold'
-        } else {
-          data.cell.styles.textColor = [156, 163, 175] // Gris
-        }
-      }
+      0: { halign: 'center', cellWidth: 10 },
+      1: { halign: 'left', cellWidth: 55 },
+      2: { halign: 'right', cellWidth: 25 },
+      3: { halign: 'center', cellWidth: 18 },
+      4: { halign: 'center', cellWidth: 18 },
+      5: { halign: 'right', cellWidth: 32 },
+      6: { halign: 'center', cellWidth: 20 }
     }
   })
 
@@ -148,22 +139,22 @@ export async function generateInventoryWord(data: InventoryData, establishmentNa
           width: { size: 15, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Qté vendue', alignment: AlignmentType.CENTER })],
+          children: [new Paragraph({ text: 'Vendus', alignment: AlignmentType.CENTER })],
           shading: { fill: 'F97316' },
-          width: { size: 12, type: WidthType.PERCENTAGE }
+          width: { size: 10, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Nb commandes', alignment: AlignmentType.CENTER })],
+          children: [new Paragraph({ text: 'Stock', alignment: AlignmentType.CENTER })],
           shading: { fill: 'F97316' },
-          width: { size: 13, type: WidthType.PERCENTAGE }
+          width: { size: 10, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
           children: [new Paragraph({ text: 'Revenu total', alignment: AlignmentType.CENTER })],
           shading: { fill: 'F97316' },
-          width: { size: 15, type: WidthType.PERCENTAGE }
+          width: { size: 20, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Statut', alignment: AlignmentType.CENTER })],
+          children: [new Paragraph({ text: 'Type', alignment: AlignmentType.CENTER })],
           shading: { fill: 'F97316' },
           width: { size: 10, type: WidthType.PERCENTAGE }
         })
@@ -189,17 +180,16 @@ export async function generateInventoryWord(data: InventoryData, establishmentNa
             children: [new Paragraph({ text: product.totalQuantity.toString(), alignment: AlignmentType.CENTER })]
           }),
           new TableCell({
-            children: [new Paragraph({ text: product.orderCount.toString(), alignment: AlignmentType.CENTER })]
+            children: [new Paragraph({ text: product.isQuantifiable ? (product.remainingQuantity || 0).toString() : '-', alignment: AlignmentType.CENTER })]
           }),
           new TableCell({
             children: [new Paragraph({ text: `${product.totalRevenue % 1 === 0 ? product.totalRevenue : product.totalRevenue.toFixed(2)} FCFA`, alignment: AlignmentType.RIGHT })]
           }),
           new TableCell({
             children: [new Paragraph({
-              text: product.totalQuantity > 0 ? 'Vendu' : 'Non vendu',
+              text: product.isQuantifiable ? 'Physique' : 'Service',
               alignment: AlignmentType.CENTER
             })],
-            shading: { fill: product.totalQuantity > 0 ? 'E8F5E9' : 'F5F5F5' }
           })
         ]
       })

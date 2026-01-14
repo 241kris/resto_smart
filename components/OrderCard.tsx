@@ -1,7 +1,6 @@
 "use client"
 
 import { ShoppingCart, Eye, Clock, CheckCircle, DollarSign, Trash2, FileText, MoreVertical } from "lucide-react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -12,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { type Order } from "@/lib/hooks/useOrders"
+import { useOfflineSync } from "@/lib/hooks/useOfflineSync"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -34,153 +34,92 @@ export function OrderCard({
   hasEstablishment,
   isUpdating = false
 }: OrderCardProps) {
-  const getStatusBadge = (status: Order["status"]) => {
-    const statusConfig = {
-      PENDING: { variant: "destructive" as const, label: "En attente", icon: Clock },
-      completed: { variant: "secondary" as const, label: "Traité", icon: CheckCircle },
-      PAID: { variant: "default" as const, label: "Payé", icon: DollarSign },
-      CANCELLED: { variant: "outline" as const, label: "Annulé", icon: Clock },
+  const { isOnline } = useOfflineSync()
+
+  const getStatusInfo = (status: Order["status"]) => {
+    switch (status) {
+      case 'PENDING': return { label: 'Attente', color: 'text-orange-600 bg-orange-50 border-orange-100', icon: Clock }
+      case 'completed': return { label: 'Prêt', color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle }
+      case 'PAID': return { label: 'Payé', color: 'text-blue-600 bg-blue-50 border-blue-100', icon: DollarSign }
+      case 'CANCELLED': return { label: 'Annulé', color: 'text-slate-500 bg-slate-100 border-slate-200', icon: Clock }
+      default: return { label: status, color: 'text-slate-500', icon: Clock }
     }
-
-    const config = statusConfig[status]
-    const Icon = config.icon
-
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    )
   }
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy 'à' HH:mm", { locale: fr })
-  }
+  const { label, color, icon: StatusIcon } = getStatusInfo(order.status)
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-semibold text-sm">#{order.id.slice(0, 8)}</span>
-              {getStatusBadge(order.status)}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {order.table ? (
-                <>
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-semibold text-primary">
-                      {order.table.name}
-                    </span>
-                  </div>
-                  <span className="truncate">Table {order.table.name}</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4 text-orange-600 flex-shrink-0" />
-                  <span className="truncate text-orange-600">Public</span>
-                </>
-              )}
-            </div>
+    <div className="p-4 bg-white dark:bg-slate-900 flex items-center gap-4 group hover:bg-slate-50/50 transition-colors">
+      {/* Left Icon/Status */}
+      <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${color}`}>
+        <StatusIcon className="h-6 w-6" />
+      </div>
+
+      {/* Main Info */}
+      <div className="flex-1 min-w-0" onClick={() => onViewDetails(order)}>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-base">#{order.id.slice(0, 4)}</span>
+            {order.table ? (
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-slate-200 text-slate-500 font-normal rounded-md">
+                T-{order.table.name}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-dashed border-slate-300 text-slate-400 font-normal rounded-md">
+                Public
+              </Badge>
+            )}
           </div>
+          <span className="font-bold text-base text-slate-900 dark:text-white">
+            {order.totalAmount.toLocaleString()} F
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{format(new Date(order.createdAt), "HH:mm")} • {order.items.length} produit(s)</span>
+          <span className={`font-medium ${color.split(' ')[0]}`}>{label}</span>
+        </div>
+      </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onViewDetails(order)}>
-                <Eye className="h-4 w-4 mr-2" />
-                Voir détails
-              </DropdownMenuItem>
-
+      {/* Actions */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-10 w-10 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
+            <MoreVertical className="h-5 w-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="text-sm">
+          <DropdownMenuItem onClick={() => onViewDetails(order)}>
+            <Eye className="h-4 w-4 mr-2" /> Détails
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {order.status === "PENDING" && (
+            <DropdownMenuItem onClick={() => onUpdateStatus(order.id, "completed")}>
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-500" /> Prêt
+            </DropdownMenuItem>
+          )}
+          {(order.status === "PENDING" || order.status === "completed") && (
+            <DropdownMenuItem onClick={() => onUpdateStatus(order.id, "PAID")}>
+              <DollarSign className="h-4 w-4 mr-2 text-blue-500" /> Payer
+            </DropdownMenuItem>
+          )}
+          {order.status === "PAID" && (
+            <DropdownMenuItem onClick={() => onDownloadInvoice(order)}>
+              <FileText className="h-4 w-4 mr-2" /> Facture
+            </DropdownMenuItem>
+          )}
+          {isOnline && (order.status === "PENDING" || order.status === "completed") && (
+            <>
               <DropdownMenuSeparator />
-
-              {order.status === "PENDING" && (
-                <DropdownMenuItem
-                  onClick={() => onUpdateStatus(order.id, "completed")}
-                  disabled={isUpdating}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Marquer traité
-                </DropdownMenuItem>
-              )}
-
-              {(order.status === "PENDING" || order.status === "completed") && (
-                <DropdownMenuItem
-                  onClick={() => onUpdateStatus(order.id, "PAID")}
-                  disabled={isUpdating}
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Marquer payé
-                </DropdownMenuItem>
-              )}
-
-              {order.status === "PAID" && (
-                <DropdownMenuItem
-                  onClick={() => onDownloadInvoice(order)}
-                  disabled={!hasEstablishment}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Télécharger facture
-                </DropdownMenuItem>
-              )}
-
-              {(order.status === "PENDING" || order.status === "completed") && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onUpdateStatus(order.id, "CANCELLED")}
-                    disabled={isUpdating}
-                    className="text-orange-600 focus:text-orange-600"
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Annuler la commande
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onDelete(order.id)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Supprimer
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-
-      <CardContent className="pb-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-muted-foreground text-xs mb-1">Date/Heure</p>
-            <p className="font-medium">{formatDate(order.createdAt)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-muted-foreground text-xs mb-1">Montant</p>
-            <p className="font-bold text-primary text-base">{order.totalAmount % 1 === 0 ? order.totalAmount : order.totalAmount.toFixed(2)} FCFA</p>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <p className="text-muted-foreground text-xs mb-1">Articles</p>
-          <p className="font-medium text-sm">{order.items.length} article{order.items.length > 1 ? 's' : ''}</p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-3"
-          onClick={() => onViewDetails(order)}
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          Voir les détails
-        </Button>
-      </CardContent>
-    </Card>
+              <DropdownMenuItem onClick={() => onUpdateStatus(order.id, "CANCELLED")} className="text-orange-600">
+                <Clock className="h-4 w-4 mr-2" /> Annuler
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(order.id)} className="text-rose-600">
+                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

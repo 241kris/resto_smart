@@ -48,30 +48,38 @@ export async function GET(request: NextRequest) {
 
     // Récupérer les paramètres de la requête
     const searchParams = request.nextUrl.searchParams;
-    const period = searchParams.get('period') || '7days';
+    const period = searchParams.get('period') || 'today';
+    const specificDate = searchParams.get('date');
 
     let startDate: Date;
+    let endDate: Date = endOfDay(new Date());
 
     // Déterminer la période
-    if (period === '7days') {
+    if (period === 'today') {
+      startDate = startOfDay(new Date());
+      endDate = endOfDay(new Date());
+    } else if (period === 'yesterday') {
+      startDate = startOfDay(subDays(new Date(), 1));
+      endDate = endOfDay(subDays(new Date(), 1));
+    } else if (period === 'before_yesterday') {
+      startDate = startOfDay(subDays(new Date(), 2));
+      endDate = endOfDay(subDays(new Date(), 2));
+    } else if (period === 'week') {
+      // Semaine glissante (7 derniers jours incluant aujourd'hui)
+      startDate = startOfDay(subDays(new Date(), 6));
+      endDate = endOfDay(new Date());
+    } else if (period === 'date' && specificDate) {
+      const date = new Date(specificDate);
+      startDate = startOfDay(date);
+      endDate = endOfDay(date);
+    } else if (period === '7days') {
       startDate = startOfDay(subDays(new Date(), 6));
     } else if (period.endsWith('months')) {
       const monthsCount = parseInt(period.replace('months', ''));
-      if (isNaN(monthsCount) || monthsCount < 1 || monthsCount > 12) {
-        return NextResponse.json(
-          { error: 'Nombre de mois invalide (1-12)' },
-          { status: 400 }
-        );
-      }
       startDate = startOfMonth(subMonths(new Date(), monthsCount - 1));
     } else {
-      return NextResponse.json(
-        { error: 'Période invalide' },
-        { status: 400 }
-      );
+      startDate = startOfDay(new Date());
     }
-
-    const endDate = endOfDay(new Date());
 
     // Récupérer tous les items de commandes PAID de la période
     const orderItems = await prisma.orderItem.findMany({
@@ -92,6 +100,8 @@ export async function GET(request: NextRequest) {
             name: true,
             image: true,
             price: true,
+            isQuantifiable: true,
+            quantity: true,
           }
         }
       }
@@ -107,6 +117,8 @@ export async function GET(request: NextRequest) {
         totalQuantity: number
         totalRevenue: number
         orderCount: number
+        isQuantifiable: boolean
+        remainingQuantity: number | null
       }
     } = {};
 
@@ -125,6 +137,8 @@ export async function GET(request: NextRequest) {
           totalQuantity: 0,
           totalRevenue: 0,
           orderCount: 0,
+          isQuantifiable: item.product.isQuantifiable,
+          remainingQuantity: item.product.quantity || 0,
         };
         ordersByProduct[productId] = new Set();
       }
@@ -139,16 +153,19 @@ export async function GET(request: NextRequest) {
       productStats[productId].orderCount = ordersByProduct[productId].size;
     });
 
-    // Récupérer TOUS les produits de l'établissement
+    // Récupérer TOUS les produits de l'établissement pour inclure ceux qui n'ont pas été vendus
     const allProducts = await prisma.product.findMany({
       where: {
         establishmentId: user.establishment.id,
+        status: true, // Uniquement les produits actifs
       },
       select: {
         id: true,
         name: true,
         image: true,
         price: true,
+        isQuantifiable: true,
+        quantity: true,
       },
       orderBy: {
         name: 'asc',
@@ -169,15 +186,21 @@ export async function GET(request: NextRequest) {
           totalQuantity: 0,
           totalRevenue: 0,
           orderCount: 0,
+          isQuantifiable: product.isQuantifiable,
+          remainingQuantity: product.quantity || 0,
         };
       }
     });
 
-    // Trier par revenu décroissant
-    const sortedProducts = [...allProductsWithStats].sort((a, b) => b.totalRevenue - a.totalRevenue);
+    // Trier : Produits quantifiables d'abord, puis par revenu décroissant
+    const sortedProducts = [...allProductsWithStats].sort((a, b) => {
+      if (a.isQuantifiable && !b.isQuantifiable) return -1;
+      if (!a.isQuantifiable && b.isQuantifiable) return 1;
+      return b.totalRevenue - a.totalRevenue;
+    });
 
     // Calculer les totaux (uniquement produits vendus)
-    const soldProducts = sortedProducts.filter(p => p.totalQuantity > 0);
+    const soldProducts = allProductsWithStats.filter(p => p.totalQuantity > 0);
     const totalQuantity = soldProducts.reduce((sum, p) => sum + p.totalQuantity, 0);
     const totalRevenue = soldProducts.reduce((sum, p) => sum + p.totalRevenue, 0);
 
@@ -192,7 +215,7 @@ export async function GET(request: NextRequest) {
         totalRevenue,
         totalProductsInCatalog: allProducts.length,
       },
-      products: sortedProducts, // Tous les produits (vendus et invendus) triés par revenu
+      products: sortedProducts,
     });
 
   } catch (error) {

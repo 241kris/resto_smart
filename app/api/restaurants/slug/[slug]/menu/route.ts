@@ -75,7 +75,139 @@ export async function GET(
       }
     });
 
-    // 4. Retourner les données
+    // 4. Récupérer les données du menu intelligent
+    const now = new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    // Plats du jour (aujourd'hui uniquement)
+    const dishesOfTheDay = await prisma.dishOfTheDay.findMany({
+      where: {
+        establishmentId: restaurant.id,
+        date: {
+          gte: today,
+          lt: tomorrow
+        },
+        isActive: true
+      },
+      include: {
+        product: {
+          include: {
+            category: true
+          }
+        }
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    })
+
+    // Promotions actives
+    const promotions = await prisma.promotion.findMany({
+      where: {
+        establishmentId: restaurant.id,
+        isActive: true,
+        startDate: { lte: now },
+        endDate: { gte: now }
+      },
+      include: {
+        product: {
+          include: {
+            category: true
+          }
+        }
+      },
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    })
+
+    // Filtrer les promotions selon le jour et l'heure
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+    const activePromotions = promotions.filter(promo => {
+      if (promo.daysOfWeek) {
+        const allowedDays = promo.daysOfWeek as string[]
+        if (!allowedDays.includes(currentDay)) {
+          return false
+        }
+      }
+      if (promo.startTime && promo.endTime) {
+        if (currentTime < promo.startTime || currentTime > promo.endTime) {
+          return false
+        }
+      }
+      return true
+    })
+
+    // Recommandations actives
+    const recommendations = await prisma.recommendation.findMany({
+      where: {
+        establishmentId: restaurant.id,
+        isActive: true,
+        OR: [
+          { startDate: null, endDate: null },
+          {
+            AND: [
+              { startDate: { lte: now } },
+              { endDate: { gte: now } }
+            ]
+          }
+        ]
+      },
+      include: {
+        product: {
+          include: {
+            category: true
+          }
+        }
+      },
+      orderBy: [
+        { score: 'desc' },
+        { displayOrder: 'asc' }
+      ]
+    })
+
+    // 5. Enrichir les produits avec les données du menu intelligent
+    const enrichedProducts = products.map(product => {
+      const promotion = activePromotions.find(p => p.productId === product.id)
+      const isDishOfDay = dishesOfTheDay.some(d => d.productId === product.id)
+      const recommendation = recommendations.find(r => r.productId === product.id)
+
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image: product.image,
+        categoryId: product.categoryId,
+        category: product.category,
+        isQuantifiable: product.isQuantifiable,
+        quantity: product.quantity,
+        // Données enrichies
+        promotion: promotion ? {
+          id: promotion.id,
+          name: promotion.name,
+          discountedPrice: promotion.discountedPrice,
+          discountPercent: promotion.discountPercent,
+          badge: promotion.badge,
+          description: promotion.description
+        } : null,
+        isDishOfDay,
+        recommendation: recommendation ? {
+          id: recommendation.id,
+          type: recommendation.type,
+          reason: recommendation.reason,
+          badge: recommendation.badge,
+          score: recommendation.score
+        } : null
+      }
+    })
+
+    // 6. Retourner les données
     return NextResponse.json({
       success: true,
       restaurant: {
@@ -91,19 +223,35 @@ export async function GET(
         longitude: restaurant.longitude,
       },
       categories,
-      products: products.map(product => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        image: product.image,
-        categoryId: product.categoryId,
-        category: product.category,
-        isQuantifiable: product.isQuantifiable,
-        quantity: product.quantity,
-      })),
+      products: enrichedProducts,
       totalProducts: products.length,
       totalCategories: categories.length,
+      // Données du menu intelligent
+      dishesOfTheDay: dishesOfTheDay.map(d => ({
+        id: d.id,
+        product: d.product,
+        specialDescription: d.specialDescription,
+        displayOrder: d.displayOrder
+      })),
+      promotions: activePromotions.map(p => ({
+        id: p.id,
+        name: p.name,
+        product: p.product,
+        discountedPrice: p.discountedPrice,
+        discountPercent: p.discountPercent,
+        badge: p.badge,
+        description: p.description,
+        displayOrder: p.displayOrder
+      })),
+      recommendations: recommendations.map(r => ({
+        id: r.id,
+        type: r.type,
+        product: r.product,
+        reason: r.reason,
+        badge: r.badge,
+        score: r.score,
+        displayOrder: r.displayOrder
+      }))
     });
 
   } catch (error) {

@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const monthNames = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ]
+
     // Vérifier qu'il n'y a pas déjà un autre mois ouvert
     const openMonth = await prisma.attendanceMonth.findFirst({
       where: {
@@ -80,16 +85,32 @@ export async function POST(request: NextRequest) {
     })
 
     if (openMonth) {
+      // Si c'est le même mois qu'on essaie d'ouvrir, retourner success (idempotent)
+      if (openMonth.year === year && openMonth.month === month) {
+        return NextResponse.json(
+          {
+            message: `Le mois ${monthNames[month - 1]} ${year} est déjà ouvert`,
+            attendanceMonth: openMonth
+          },
+          { status: 200 }
+        )
+      }
+
+      // Un autre mois est ouvert
       return NextResponse.json(
         {
-          error: `Impossible d'ouvrir le mois ${month}/${year}. Le mois ${openMonth.month}/${openMonth.year} est déjà ouvert. Veuillez le clôturer avant d'en ouvrir un nouveau.`,
-          openMonth
+          error: `Impossible d'ouvrir ${monthNames[month - 1]} ${year}. Le mois ${monthNames[openMonth.month - 1]} ${openMonth.year} est actuellement ouvert. Veuillez d'abord clôturer ${monthNames[openMonth.month - 1]} ${openMonth.year} avant d'en ouvrir un nouveau.`,
+          openMonth: {
+            year: openMonth.year,
+            month: openMonth.month,
+            monthName: monthNames[openMonth.month - 1]
+          }
         },
         { status: 409 }
       )
     }
 
-    // Vérifier si le mois n'est pas déjà ouvert
+    // Vérifier si le mois n'existe pas déjà en tant que clôturé
     const existing = await prisma.attendanceMonth.findUnique({
       where: {
         establishmentId_year_month: {
@@ -100,10 +121,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    if (existing) {
+    if (existing && existing.status === 'CLOSED') {
       return NextResponse.json(
         {
-          error: `Le mois ${month}/${year} est déjà ${existing.status === 'OPEN' ? 'ouvert' : 'clôturé'}`,
+          error: `Le mois ${monthNames[month - 1]} ${year} est déjà clôturé et ne peut pas être rouvert`,
           attendanceMonth: existing
         },
         { status: 409 }

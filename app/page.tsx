@@ -13,7 +13,7 @@ import OrdersPage from "@/components/OrdersPage"
 import RestockHistoryPage from "@/components/RestockHistoryPage"
 import EmployeesPage from "@/components/EmployeesPage"
 import SchedulesPage from "@/components/SchedulesPage"
-import AttendancePage from "@/components/AttendancePage"
+import SmartMenuPage from "@/components/SmartMenuPage"
 import EstablishmentPage from "@/components/EstablishmentPage"
 import AuthPage from "@/components/AuthPage"
 
@@ -21,12 +21,12 @@ const menuItems = [
   { id: "analytics", label: "Statistiques" },
   { id: "products", label: "Produits" },
   { id: "categories", label: "Catégories" },
+  { id: "smart-menu", label: "Menu Intelligent" },
   { id: "tables", label: "Tables" },
   { id: "orders", label: "Commandes" },
   { id: "restock-history", label: "Historique Stock" },
   { id: "employees", label: "Employés" },
   { id: "schedules", label: "Plannings" },
-  { id: "attendance", label: "Pointages" },
   { id: "establishment", label: "Établissement" },
 ]
 
@@ -49,6 +49,8 @@ export default function Home() {
         return <ProductsPage />
       case "categories":
         return <CategoriesPage />
+      case "smart-menu":
+        return <SmartMenuPage />
       case "tables":
         return <TablesPage />
       case "orders":
@@ -59,8 +61,6 @@ export default function Home() {
         return <EmployeesPage />
       case "schedules":
         return <SchedulesPage />
-      case "attendance":
-        return <AttendancePage />
       case "establishment":
         return <EstablishmentPage />
       default:

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export interface AttendanceMonth {
   id: string
@@ -50,6 +50,10 @@ export function useAttendanceMonth() {
       queryClient.invalidateQueries({
         queryKey: ['attendance', 'month', variables.year, variables.month]
       })
+      // Invalider le mois ouvert
+      queryClient.invalidateQueries({
+        queryKey: ['attendance', 'month', 'current']
+      })
     }
   })
 
@@ -77,6 +81,10 @@ export function useAttendanceMonth() {
       queryClient.invalidateQueries({
         queryKey: ['attendance', 'month', variables.year, variables.month]
       })
+      // Invalider le mois ouvert
+      queryClient.invalidateQueries({
+        queryKey: ['attendance', 'month', 'current']
+      })
     }
   })
 
@@ -84,4 +92,23 @@ export function useAttendanceMonth() {
     openMonth,
     closeMonth
   }
+}
+
+/**
+ * Hook pour récupérer le mois actuellement ouvert et le dernier mois clôturé
+ */
+export function useCurrentOpenMonth() {
+  return useQuery<{ openMonth: AttendanceMonth | null; lastClosedMonth: AttendanceMonth | null }>({
+    queryKey: ['attendance', 'month', 'current'],
+    queryFn: async () => {
+      const response = await fetch('/api/attendance-month/current')
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erreur lors de la récupération du mois ouvert')
+      }
+
+      return response.json()
+    }
+  })
 }
