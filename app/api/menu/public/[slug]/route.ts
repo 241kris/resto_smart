@@ -199,7 +199,7 @@ export async function GET(
     const uncategorizedProducts = enrichedProducts.filter(p => !p.category)
     if (uncategorizedProducts.length > 0) {
       categories.push({
-        id: null,
+        id: undefined,
         name: 'Autres',
         products: uncategorizedProducts
       })

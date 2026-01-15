@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Clock, AlertCircle, CalendarOff } from "lucide-react"
+import { X, Clock, AlertCircle, CalendarOff, Coffee } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -292,9 +292,9 @@ export default function TodayAttendanceDrawer({
               </div>
             )}
 
-             
 
-             
+
+
           </div>
 
           <DrawerFooter className="pt-4 border-t">
@@ -315,8 +315,8 @@ export default function TodayAttendanceDrawer({
                 {createTodayAttendance.isPending || updateTodayAttendance.isPending
                   ? "Enregistrement..."
                   : isEditing
-                  ? "Modifier le pointage"
-                  : "Enregistrer le pointage"}
+                    ? "Modifier le pointage"
+                    : "Enregistrer le pointage"}
               </Button>
             </div>
           </DrawerFooter>

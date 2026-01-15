@@ -19,6 +19,8 @@ export interface Attendance {
   startTime: string | null
   endTime: string | null
   workedHours: number | null
+  lateMinutes: number | null
+  overtimeMinutes: number | null
   isException: boolean
   exceptionReason: string | null
   notes: string | null
