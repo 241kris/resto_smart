@@ -22,7 +22,7 @@ export async function uploadImageToSupabase(file: Buffer | string, bucket: strin
     fileBuffer = file;
   }
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await supabaseAdmin.storage
     .from(bucket)
     .upload(fileName, fileBuffer, { contentType: 'image/png', upsert: true });
 

@@ -11,8 +11,7 @@ import CategoriesPage from "@/components/CategoriesPage"
 import TablesPage from "@/components/TablesPage"
 import OrdersPage from "@/components/OrdersPage"
 import RestockHistoryPage from "@/components/RestockHistoryPage"
-import EmployeesPage from "@/components/EmployeesPage"
-import SchedulesPage from "@/components/SchedulesPage"
+ 
 import SmartMenuPage from "@/components/SmartMenuPage"
 import EstablishmentPage from "@/components/EstablishmentPage"
 import AuthPage from "@/components/AuthPage"
@@ -57,10 +56,7 @@ export default function Home() {
         return <OrdersPage />
       case "restock-history":
         return <RestockHistoryPage />
-      case "employees":
-        return <EmployeesPage />
-      case "schedules":
-        return <SchedulesPage />
+ 
       case "establishment":
         return <EstablishmentPage />
       default:

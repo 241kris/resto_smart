@@ -17,7 +17,7 @@ import {
   ArcElement,
 } from 'chart.js'
  
-import { ProductStatsSection } from "@/components/ProductStatsSection"
+ 
 
 // Enregistrer les composants Chart.js
 ChartJS.register(
@@ -141,11 +141,7 @@ export default function AnalyticsPage() {
         </Badge>
       </div>
 
-      {/* Contenu de l'inventaire */}
-      <ProductStatsSection
-        period={period}
-        date={period === 'date' ? format(selectedDate, 'yyyy-MM-dd') : undefined}
-      />
+  
     </div>
   )
 }
